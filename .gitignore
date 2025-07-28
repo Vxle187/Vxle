@@ -232,4 +232,4 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
 # 🚀 Bot starten
 # =========================
 keep_alive()
-bot.run(os.environ["MTM5OTM2NTI5NzE2NDUxNzQxNw.G0dCRe.4h39b1_heOsyNpG4S2h5qBRd9Xo47nBrp-C9nA"])
+bot.run(os.environ["Discord_Token"])
