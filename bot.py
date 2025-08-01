@@ -1,4 +1,3 @@
-
 # ----------------------------------
 # LSPD Discord Bot
 # ----------------------------------
@@ -7,6 +6,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import os
+from flask import Flask
+import threading
 
 # =========================
 # 🤖 Discord Bot Setup
@@ -14,6 +15,11 @@ import os
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
+intents.members = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+tree = bot.tree
+
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
