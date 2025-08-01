@@ -216,6 +216,8 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
 # =========================
 from flask import Flask
 import threading
+import os  # <--- fehlt in deinem Code
+import discord  # falls du es noch nicht importiert hast
 
 app = Flask('')
 
@@ -234,4 +236,4 @@ def keep_alive():
 keep_alive()
 
 # Bot starten
-bot.run(os.getenv("DISCORD_BOT_TOKEN")) 
+bot.run(os.getenv("DISCORD_BOT_TOKEN"))
