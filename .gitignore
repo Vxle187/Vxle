@@ -1,29 +1,12 @@
+
 # ----------------------------------
-# LSPD Discord Bot mit UptimeRobot
+# LSPD Discord Bot
 # ----------------------------------
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-import threading
-from flask import Flask
 import os
-
-# =========================
-# 🌐 Webserver für UptimeRobot
-# =========================
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "✅ Bot is running!"
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = threading.Thread(target=run)
-    t.start()
 
 # =========================
 # 🤖 Discord Bot Setup
@@ -229,7 +212,26 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
     await interaction.response.send_message(f"⬇️ {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
 
 # =========================
-# 🚀 Bot starten
+# 🌐 Webserver für UptimeRobot
 # =========================
+from flask import Flask
+import threading
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "✅ Bot is running!"
+
+def run():
+    app.run(host='0.0.0.0', port=5000)
+
+def keep_alive():
+    t = threading.Thread(target=run)
+    t.start()
+
+# Webserver starten
 keep_alive()
-bot.run(os.environ["Discord_Token"])
+
+# Bot starten
+bot.run(os.getenv("DISCORD_BOT_TOKEN")) 
