@@ -1,0 +1,10 @@
+services:
+  - type: worker
+    name: lspd-discord-bot
+    runtime: python
+    branch: main
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot.py"
+    envVars:
+      - key: DISCORD_BOT_TOKEN
+        sync: false
