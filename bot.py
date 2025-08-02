@@ -67,7 +67,7 @@ async def on_member_join(member):
     if channel:
         embed = discord.Embed(
             title="👋 Welcome here!",
-            description=(f"Hey {member.mention}! Please follow all our rules and be respectful.\nHave fun!"),
+            description=(f"Hey {member.mention}! Willkommen auf dem Straze Police Department Discord.\nHabe viel spaß und mach die Straßen sicher!"),
             color=discord.Color.gold()
         )
         embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
