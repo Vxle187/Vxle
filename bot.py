@@ -1,5 +1,5 @@
 # ----------------------------------
-# LSPD Discord Bot
+# LSPD Discord Bot (überarbeitet)
 # ----------------------------------
 
 import discord
@@ -20,7 +20,7 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
-# Kanal-IDs (anpassen!)
+# Kanal-IDs
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
 
@@ -53,6 +53,8 @@ BEFUGTE_RANG_IDS = [
     1396969114031095937
 ]
 
+ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
+
 # =========================
 # 📡 EVENTS
 # =========================
@@ -60,6 +62,8 @@ BEFUGTE_RANG_IDS = [
 async def on_ready():
     await tree.sync()
     print(f"✅ Bot ist online als {bot.user}")
+    print("🔍 Geladene Textbefehle:", [cmd.name for cmd in bot.commands])
+    print("🔧 Slash-Befehle synchronisiert.")
 
 @bot.event
 async def on_member_join(member):
@@ -67,14 +71,13 @@ async def on_member_join(member):
     if channel:
         embed = discord.Embed(
             title="👋 Willkommen!",
-            description=(f"Hey {member.mention}! Willkommen auf dem Straze Police Department Discord.\nHabe viel spaß und mach die Straßen sicher!"),
+            description=f"Hey {member.mention}! Willkommen auf dem Straze Police Department Discord.\nHabe viel Spaß und mach die Straßen sicher!",
             color=discord.Color.gold()
         )
         embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
         embed.set_footer(text="Willkommen auf dem Straze Police Department Discord!")
         await channel.send(embed=embed)
 
-    # 👉 Automatische Rolle beim Join vergeben
     auto_role_id = 1396969113955602563
     role = member.guild.get_role(auto_role_id)
     if role:
@@ -95,48 +98,33 @@ async def on_member_remove(member):
         return
     embed = discord.Embed(
         title="👋 Auf Wiedersehen!",
-        description=f"{member.mention} Hat den server verlassen, wir hoffen wir werden uns bald wieder sehen!",
+        description=f"{member.mention} hat den Server verlassen, wir hoffen, wir sehen uns bald wieder!",
         color=discord.Color.dark_grey()
     )
     embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
     embed.set_footer(text="Auf Wiedersehen.")
     await channel.send(embed=embed)
 
-# Bot-Intents aktivieren
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
-intents.guilds = True
-intents.members = True
-
-# Bot-Prefix und Setup
-bot = commands.Bot(command_prefix='!', intents=intents)
-
-# Rollen-ID, die benötigt wird
-ERLAUBTE_ROLLEN_ID = 1401284034109243557
-
-@bot.event
-async def on_ready():
-    print(f'✅ Bot ist eingeloggt als {bot.user}')
-
-@bot.command(name='löschen')
-async def löschen(ctx, anzahl: int):
-    """Löscht eine bestimmte Anzahl an Nachrichten, wenn die Rolle erlaubt ist."""
+# =========================
+# 🧹 Text-Befehl: !loeschen
+# =========================
+@bot.command(name='loeschen')  # „löschen“ → „loeschen“ wegen ö
+async def loeschen(ctx, anzahl: int):
+    """Löscht eine bestimmte Anzahl an Nachrichten, wenn Rolle erlaubt ist."""
     autor = ctx.author
-    rolle_erlaubt = discord.utils.get(autor.roles, id=ERLAUBTE_ROLLEN_ID)
+    erlaubnis = discord.utils.get(autor.roles, id=ERLAUBTE_ROLLEN_ID)
 
-    if rolle_erlaubt:
+    if erlaubnis:
         if anzahl < 1 or anzahl > 100:
             await ctx.send("⚠️ Du kannst nur zwischen 1 und 100 Nachrichten löschen.")
             return
-
-        await ctx.channel.purge(limit=anzahl + 1)  # +1 für den Befehl selbst
-        await ctx.send(f"🧹 {anzahl} Nachrichten wurden gelöscht.", delete_after=5)
+        await ctx.channel.purge(limit=anzahl + 1)
+        await ctx.send(f"🧹 {anzahl} Nachrichten gelöscht.", delete_after=5)
     else:
-        await ctx.send("❌ Du hast keine Berechtigung, diesen Befehl zu nutzen.")
+        await ctx.send("❌ Du hast keine Berechtigung für diesen Befehl.")
 
 # =========================
-# 🛠️ Slash-Befehle
+# ✅ Slash-Befehle
 # =========================
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
@@ -276,4 +264,4 @@ def keep_alive():
 keep_alive()
 
 # Bot starten
-bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+bot.run(os.getenv("DISCORD_BOT_TOKEN"))  # Stelle sicher, dass die ENV-Variable gesetzt ist
