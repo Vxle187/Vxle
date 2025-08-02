@@ -1,5 +1,5 @@
 # ----------------------------------
-# LSPD Discord Bot (überarbeitet & Fehlerkorrekturen)
+# LSPD Discord Bot (überarbeitet)
 # ----------------------------------
 
 import discord
@@ -106,30 +106,30 @@ async def on_member_remove(member):
     await channel.send(embed=embed)
 
 # =========================
-# 🧹 Text-Befehl: !loeschen
+# 🧹 Text-Befehle: !loeschen und !löschen
 # =========================
-@bot.command(name='loeschen')  # „löschen“ → „loeschen“ wegen ö
+@bot.command(name='loeschen')
 async def loeschen(ctx, anzahl: int):
-    """Löscht eine bestimmte Anzahl an Nachrichten, wenn Rolle erlaubt ist."""
+    await nachrichten_loeschen(ctx, anzahl)
+
+@bot.command(name='löschen')
+async def löschen_umlaut(ctx, anzahl: int):
+    await nachrichten_loeschen(ctx, anzahl)
+
+async def nachrichten_loeschen(ctx, anzahl: int):
     autor = ctx.author
     erlaubnis = discord.utils.get(autor.roles, id=ERLAUBTE_ROLLEN_ID)
 
-    if erlaubnis:
-        if anzahl < 1 or anzahl > 100:
-            await ctx.send("⚠️ Du kannst nur zwischen 1 und 100 Nachrichten löschen.")
-            return
-        await ctx.channel.purge(limit=anzahl + 1)
-        await ctx.send(f"🧹 {anzahl} Nachrichten gelöscht.", delete_after=5)
-    else:
+    if not erlaubnis:
         await ctx.send("❌ Du hast keine Berechtigung für diesen Befehl.")
+        return
 
-# Fehlerhandler für unbekannte Befehle (Textbefehle)
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
-        await ctx.send("❌ Dieser Befehl existiert nicht. Bitte überprüfe deine Eingabe.")
-    else:
-        raise error  # Andere Fehler werden normal weitergereicht
+    if anzahl < 1 or anzahl > 100:
+        await ctx.send("⚠️ Du kannst nur zwischen 1 und 100 Nachrichten löschen.")
+        return
+
+    await ctx.channel.purge(limit=anzahl + 1)
+    await ctx.send(f"🧹 {anzahl} Nachrichten gelöscht.", delete_after=5)
 
 # =========================
 # ✅ Slash-Befehle
