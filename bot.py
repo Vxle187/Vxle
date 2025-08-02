@@ -95,7 +95,7 @@ async def on_member_remove(member):
         return
     embed = discord.Embed(
         title="👋 Goodbye!",
-        description=f"{member.name} has left the server. See you soon!",
+        description=f"{member.mention} Hat den server verlassen, wir hoffen wir werden uns bald wieder sehen!",
         color=discord.Color.dark_grey()
     )
     embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
