@@ -66,12 +66,12 @@ async def on_member_join(member):
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
         embed = discord.Embed(
-            title="👋 Welcome here!",
+            title="👋 Willkommen!",
             description=(f"Hey {member.mention}! Willkommen auf dem Straze Police Department Discord.\nHabe viel spaß und mach die Straßen sicher!"),
             color=discord.Color.gold()
         )
         embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
-        embed.set_footer(text="Welcome to our Discord Server!")
+        embed.set_footer(text="Willkommen auf dem Straze Police Department Discord!")
         await channel.send(embed=embed)
 
     # 👉 Automatische Rolle beim Join vergeben
@@ -94,12 +94,12 @@ async def on_member_remove(member):
     if not channel:
         return
     embed = discord.Embed(
-        title="👋 Goodbye!",
+        title="👋 Auf Wiedersehen!",
         description=f"{member.mention} Hat den server verlassen, wir hoffen wir werden uns bald wieder sehen!",
         color=discord.Color.dark_grey()
     )
     embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
-    embed.set_footer(text="User left the Discord Server.")
+    embed.set_footer(text="Auf Wiedersehen.")
     await channel.send(embed=embed)
 
 # =========================
