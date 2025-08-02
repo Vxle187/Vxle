@@ -102,6 +102,39 @@ async def on_member_remove(member):
     embed.set_footer(text="Auf Wiedersehen.")
     await channel.send(embed=embed)
 
+# Bot-Intents aktivieren
+intents = discord.Intents.default()
+intents.messages = True
+intents.message_content = True
+intents.guilds = True
+intents.members = True
+
+# Bot-Prefix und Setup
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+# Rollen-ID, die benötigt wird
+ERLAUBTE_ROLLEN_ID = 1401284034109243557
+
+@bot.event
+async def on_ready():
+    print(f'✅ Bot ist eingeloggt als {bot.user}')
+
+@bot.command(name='löschen')
+async def löschen(ctx, anzahl: int):
+    """Löscht eine bestimmte Anzahl an Nachrichten, wenn die Rolle erlaubt ist."""
+    autor = ctx.author
+    rolle_erlaubt = discord.utils.get(autor.roles, id=ERLAUBTE_ROLLEN_ID)
+
+    if rolle_erlaubt:
+        if anzahl < 1 or anzahl > 100:
+            await ctx.send("⚠️ Du kannst nur zwischen 1 und 100 Nachrichten löschen.")
+            return
+
+        await ctx.channel.purge(limit=anzahl + 1)  # +1 für den Befehl selbst
+        await ctx.send(f"🧹 {anzahl} Nachrichten wurden gelöscht.", delete_after=5)
+    else:
+        await ctx.send("❌ Du hast keine Berechtigung, diesen Befehl zu nutzen.")
+
 # =========================
 # 🛠️ Slash-Befehle
 # =========================
