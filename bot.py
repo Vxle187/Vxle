@@ -1,5 +1,5 @@
 # ----------------------------------
-# LSPD Discord Bot (überarbeitet)
+# LSPD Discord Bot (überarbeitet & Fehlerkorrekturen)
 # ----------------------------------
 
 import discord
@@ -122,6 +122,14 @@ async def loeschen(ctx, anzahl: int):
         await ctx.send(f"🧹 {anzahl} Nachrichten gelöscht.", delete_after=5)
     else:
         await ctx.send("❌ Du hast keine Berechtigung für diesen Befehl.")
+
+# Fehlerhandler für unbekannte Befehle (Textbefehle)
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send("❌ Dieser Befehl existiert nicht. Bitte überprüfe deine Eingabe.")
+    else:
+        raise error  # Andere Fehler werden normal weitergereicht
 
 # =========================
 # ✅ Slash-Befehle
