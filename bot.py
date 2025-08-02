@@ -100,7 +100,7 @@ async def on_member_remove(member):
     )
     embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
     embed.set_footer(text="User left the Discord Server.")
-    await channel.send
+    await channel.send(embed=embed)
 
 # =========================
 # 🛠️ Slash-Befehle
