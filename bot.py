@@ -26,7 +26,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
 # Kanal-IDs (anpassen!)
-WILLKOMMEN_KANAL_ID = 123456789012345678
+WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
 
 # Rollen und Ränge
