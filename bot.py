@@ -20,11 +20,6 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
-intents.members = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-tree = bot.tree
-
 # Kanal-IDs (anpassen!)
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
@@ -69,18 +64,29 @@ async def on_ready():
 @bot.event
 async def on_member_join(member):
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
-    if not channel:
-        return
-    embed = discord.Embed(
-        title="👋 Welcome here!",
-        description=(
-            f"Hey {member.mention}! Please follow all our rules and be respectful.\nHave fun!"
-        ),
-        color=discord.Color.gold()
-    )
-    embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
-    embed.set_footer(text="Welcome to our Discord Server!")
-    await channel.send(embed=embed)
+    if channel:
+        embed = discord.Embed(
+            title="👋 Welcome here!",
+            description=(f"Hey {member.mention}! Please follow all our rules and be respectful.\nHave fun!"),
+            color=discord.Color.gold()
+        )
+        embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
+        embed.set_footer(text="Welcome to our Discord Server!")
+        await channel.send(embed=embed)
+
+    # 👉 Automatische Rolle beim Join vergeben
+    auto_role_id = 1396969113955602563
+    role = member.guild.get_role(auto_role_id)
+    if role:
+        try:
+            await member.add_roles(role)
+            print(f"✅ Rolle '{role.name}' wurde an {member} vergeben.")
+        except discord.Forbidden:
+            print(f"❌ Keine Berechtigung, um {member} die Rolle zu geben.")
+        except discord.HTTPException as e:
+            print(f"❌ Fehler beim Vergeben der Rolle an {member}: {e}")
+    else:
+        print(f"⚠️ Rolle mit ID {auto_role_id} nicht gefunden.")
 
 @bot.event
 async def on_member_remove(member):
@@ -220,11 +226,6 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
 # =========================
 # 🌐 Webserver für UptimeRobot
 # =========================
-from flask import Flask
-import threading
-import os  # <--- fehlt in deinem Code
-import discord  # falls du es noch nicht importiert hast
-
 app = Flask('')
 
 @app.route('/')
