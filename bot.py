@@ -82,8 +82,9 @@ async def on_member_join(member):
             name="Police Department | Alpha City",
             icon_url=member.guild.icon.url if member.guild.icon else None
         )
-     embed.set_image
-(url="https://cdn.discordapp.com/attachments/1396969114039226598/1401645360413151253/IMG_2859.png")
+             embed.set_image(
+            url="https://cdn.discordapp.com/attachments/1396969114039226598/1401645360413151253/IMG_2859.png"
+        )
         )
         embed.set_footer(
             text="Willkommen auf dem Straze Police Department Discord!"
