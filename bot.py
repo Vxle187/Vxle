@@ -83,7 +83,7 @@ async def on_member_join(member):
             icon_url=member.guild.icon.url if member.guild.icon else None
         )
         embed.set_image(
-            url="https://cdn.discordapp.com/attachments/1396969114039226598/1401645360413151253/IMG_2859.png"
+            url="https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png?ex=68910f1b&is=688fbd9b&hm=d0e1c423b694b8097c10138461dae40491b1d883da14b3259f752fe12778364b&"
         )
         embed.set_footer(
             text="Willkommen auf dem Straze Police Department Discord!"
