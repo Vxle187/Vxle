@@ -113,6 +113,10 @@ async def on_member_remove(member):
         title="👋 Auf Wiedersehen!",
         description=f"{member.mention} hat den Server verlassen, wir hoffen, wir sehen uns bald wieder!",
         color=discord.Color.dark_grey()
+        
+    )
+        embed.set_image(
+            url="https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png?ex=68910f1b&is=688fbd9b&hm=d0e1c423b694b8097c10138461dae40491b1d883da14b3259f752fe12778364b&"
     )
     embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
     embed.set_footer(text="Auf Wiedersehen.")
