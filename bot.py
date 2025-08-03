@@ -70,12 +70,24 @@ async def on_member_join(member):
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
         embed = discord.Embed(
-            title="👋 Willkommen!",
-            description=f"Hey {member.mention}! Willkommen auf dem Straze Police Department Discord.\nHabe viel Spaß und mach die Straßen sicher!",
-            color=discord.Color.gold()
+            title=f"<@{member.id}>, willkommen auf **Straze Police Department** 👮",
+            description=(
+                "📚 **Schön das du da bis!**\n"
+                "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
+                "🛡️ **Falls du Fragen hast**, **wennde dich an die Leitung!**"
+            ),
+            color=discord.Color.dark_blue()
         )
-        embed.set_author(name="Police Department | Alpha City", icon_url=member.guild.icon.url if member.guild.icon else None)
-        embed.set_footer(text="Willkommen auf dem Straze Police Department Discord!")
+        embed.set_author(
+            name="Police Department | Alpha City",
+            icon_url=member.guild.icon.url if member.guild.icon else None
+        )
+        embed.set_image(
+            url="https://cdn.discordapp.com/attachments/1396969114039226598/1401645360413151253/IMG_2859.png"
+        )
+        embed.set_footer(
+            text="Willkommen auf dem Straze Police Department Discord!"
+        )
         await channel.send(embed=embed)
 
     auto_role_id = 1396969113955602563
