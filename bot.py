@@ -79,7 +79,7 @@ async def on_member_join(member):
             color=discord.Color.dark_blue()
         )
         embed.set_author(
-            name="Police Department | Alpha City",
+            name="Police Department | STRAZE",
             icon_url=member.guild.icon.url if member.guild.icon else None
         )
         embed.set_image(
@@ -102,6 +102,7 @@ async def on_member_join(member):
             print(f"❌ Fehler beim Vergeben der Rolle an {member}: {e}")
     else:
         print(f"⚠️ Rolle mit ID {auto_role_id} nicht gefunden.")
+
 
 @bot.event
 async def on_member_remove(member):
