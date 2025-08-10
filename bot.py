@@ -30,7 +30,6 @@ registrierte_user = {}
 ROLLEN_IDS = [
     1396969113955602569,
     1396969114022711376,
-    
 ]
 
 RANGLISTE = [
@@ -121,7 +120,7 @@ async def on_member_remove(member):
         url="https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
     )
     embed.set_author(
-        name="Police Department | Alpha City",
+        name="Police Department | Blood Life",
         icon_url=member.guild.icon.url if member.guild.icon else None
     )
     embed.set_footer(text="Auf Wiedersehen.")
