@@ -48,23 +48,6 @@ RANGLISTE = [
     1396969114031095936,
     1396969114031095937,
 ]
-
-# IDs der Polizei-Rollen nach Rang sortiert
-RANK_ROLES = [
-    (1396969114031095937, "🔴 ★★★★★ | Chief of Police"),
-    (1396969114031095936, "🔴 ★★★★ | Assistant Chief"),
-    (1396969114031095935, "🔴 ★★★ | Deputy Chief"),
-    (1396969114031095933, "🔴 ⚙️ | Commander"),
-    (1396969114031095932, "⚪ ✴ | Major"),
-    (1396969114031095931, "🟣 ▮▮▮ | Captain"),
-    (1396969114031095930, "🟣 ▮▮ | First Lieutenant"),
-    (1396969114031095929, "🔵 ▮ | Lieutenant"),
-    (1396969114022711383, "🔵 ▲▲▲ | Sergeant"),
-    (1396969114022711378, "🔵 ▲▮ | II Officer"),
-    (1396969114022711377, "🟢 ~ | Officer"),
-    (1396969114022711376, "🟢 ⚪ | Rekrut"),
-]
-
 BEFUGTE_RANG_IDS = [
     1396969114005930128,
     1396969114031095936,
@@ -72,41 +55,8 @@ BEFUGTE_RANG_IDS = [
     1396969114039226595
 ]
 
-ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
+ERLAUBTE_ROLLEN_ID = 1401284034109243557 # Für !loeschen
 
-# 📦 Hilfsfunktion Rangliste
-def build_ranking_embed(guild: discord.Guild) -> discord.Embed:
-    embed = discord.Embed(
-        title="👮‍♂️ Polizei Rangliste (automatisch aktualisiert)",
-        color=discord.Color.dark_blue(),
-        description="📋 Aktueller Stand aller LSPD-Dienstgrade:"
-    )
-    embed.set_thumbnail(url=LOGO_URL)
-    embed.set_footer(
-        text=f"Stand: {discord.utils.format_dt(discord.utils.utcnow(), style='D')}"
-    )
-
-    for role_id, role_name in RANK_ROLES:
-        role = guild.get_role(role_id)
-        if not role:
-            continue
-
-        members = []
-        for member in role.members:
-            daten = registrierte_user.get(member.id)
-            if daten:
-                dienstnummer = daten.get("dienstnummer", "").zfill(2)
-                name = daten.get("name", member.display_name)
-                members.append(f"`[{dienstnummer}]` {name}")
-            else:
-                members.append(member.mention)
-
-        # 2 Leerzeilen vor den Mitgliedern
-        value = "\n\n" + ("\n\n".join(members) if members else "Keine Mitglieder")
-
-        embed.add_field(name=f"@{role_name}", value=value, inline=False)
-
-    return embed
 
 # =========================
 # 📡 EVENTS
@@ -150,12 +100,12 @@ async def on_member_join(member):
             color=discord.Color.dark_blue()
         )
         embed.set_author(
-            name="Police Department | STRAZE",
+            name="Police Department | BloodLife",
             icon_url=member.guild.icon.url if member.guild.icon else None
         )
         embed.set_image(url=LOGO_URL)
         embed.set_footer(
-            text="Willkommen auf dem Straze Police Department Discord!"
+            text="Willkommen auf dem BloodLife Police Department Discord!"
         )
         await channel.send(embed=embed)
 
@@ -220,11 +170,6 @@ async def nachrichten_loeschen(ctx, anzahl: int):
 # =========================
 # ✅ Slash-Befehle
 # =========================
-@tree.command(name="rangliste", description="Zeigt die aktuelle Polizei-Rangliste an.")
-async def rangliste(interaction: discord.Interaction):
-    await interaction.response.defer()
-    embed = build_ranking_embed(interaction.guild)
-    await interaction.followup.send(embed=embed)
 
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
@@ -342,33 +287,31 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("❌ Rollenwechsel fehlgeschlagen.", ephemeral=True)
         return
 
-    await interaction.response.send_message(f"⬇️ {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
+    await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
 
 # =========================
-# 🌐 Webserver für Keep-Alive (z.B. Replit)
+# 🌐 Webserver für Keep-Alive (optional)
 # =========================
-app = Flask("")
+app = Flask('')
 
-@app.route("/")
+@app.route('/')
 def home():
     return "Bot läuft!"
 
-def run_webserver():
-    app.run(host="0.0.0.0", port=8080)
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    thread = threading.Thread(target=run)
+    thread.start()
 
 # =========================
-# 🌟 Bot-Start
+# 🔑 Bot starten
 # =========================
-
 if __name__ == "__main__":
-    # Bot-Token direkt hier eintragen oder als Umgebungsvariable setzen
+    keep_alive()
     TOKEN = os.getenv("DISCORD_BOT_TOKEN")
     if not TOKEN:
-        print("❌ Kein Token gefunden. Bitte setze die Umgebungsvariable DISCORD_BOT_TOKEN oder trage den Token hier ein.")
-        TOKEN = "DEIN_TOKEN_HIER"  # <- Hier deinen Token eintragen
-
-    # Webserver parallel starten
-    threading.Thread(target=run_webserver).start()
-
-    # Bot starten
-    bot.run(TOKEN)
+        print("❌ Kein Bot Token gefunden in Umgebungsvariablen.")
+    else:
+        bot.run(TOKEN)
