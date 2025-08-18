@@ -72,7 +72,7 @@ BEFUGTE_RANG_IDS = [
     1396969114039226595
 ]
 
-ERLAUBTE_ROLLEN_ID = 1401284034109243557 # Für !loeschen
+ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
 
 # 📦 Hilfsfunktion Rangliste
 def build_ranking_embed(guild: discord.Guild) -> discord.Embed:
@@ -345,28 +345,30 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
     await interaction.response.send_message(f"⬇️ {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
 
 # =========================
-# 🌐 Keep-Alive Webserver
+# 🌐 Webserver für Keep-Alive (z.B. Replit)
 # =========================
-app = Flask('')
+app = Flask("")
 
-@app.route('/')
+@app.route("/")
 def home():
     return "Bot läuft!"
 
 def run_webserver():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    thread = threading.Thread(target=run_webserver)
-    thread.start()
+    app.run(host="0.0.0.0", port=8080)
 
 # =========================
-# 🏁 Bot starten
+# 🌟 Bot-Start
 # =========================
+
 if __name__ == "__main__":
-    keep_alive()
+    # Bot-Token direkt hier eintragen oder als Umgebungsvariable setzen
     TOKEN = os.getenv("DISCORD_BOT_TOKEN")
     if not TOKEN:
-        print("❌ Kein Discord Bot Token gefunden in Umgebungsvariablen!")
-    else:
-        bot.run(TOKEN)
+        print("❌ Kein Token gefunden. Bitte setze die Umgebungsvariable DISCORD_BOT_TOKEN oder trage den Token hier ein.")
+        TOKEN = "DEIN_TOKEN_HIER"  # <- Hier deinen Token eintragen
+
+    # Webserver parallel starten
+    threading.Thread(target=run_webserver).start()
+
+    # Bot starten
+    bot.run(TOKEN)
