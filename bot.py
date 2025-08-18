@@ -298,7 +298,14 @@ def build_ranking_embed(guild):
         role = guild.get_role(role_id)
         if role:
             count = len(role.members)
-            embed.add_field(name=role.name, value=f"Mitglieder: {count}", inline=False)
+            embed.add_field(
+                name=f"• {role.name}",
+                value=f"Mitglieder: {count}\n",  # Abstand zwischen Feldern
+                inline=False
+            )
+
+    # Thumbnail Bild oben rechts
+    embed.set_thumbnail(url="https://static.wikia.nocookie.net/arab-fivem/images/8/8f/Los_Santos_Police_Department.png")
     embed.set_footer(text="Straze Police Department")
     return embed
 
