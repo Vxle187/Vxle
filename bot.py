@@ -101,8 +101,8 @@ def build_ranking_embed(guild: discord.Guild) -> discord.Embed:
             else:
                 members.append(member.mention)
 
-        # Hier ein zusätzlicher Zeilenumbruch vor den Mitgliedern
-        value = "\n\n" + ("\n".join(members) if members else "Keine Mitglieder")
+        # 2 Leerzeilen vor den Mitgliedern
+        value = "\n\n" + ("\n\n".join(members) if members else "Keine Mitglieder")
 
         embed.add_field(name=f"@{role_name}", value=value, inline=False)
 
@@ -370,4 +370,3 @@ if __name__ == "__main__":
         print("❌ Kein Bot Token gefunden in Umgebungsvariablen.")
     else:
         bot.run(TOKEN)
-
