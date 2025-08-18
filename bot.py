@@ -350,7 +350,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Straze Police Bot ist online."
+    return "Blood Life Police Bot ist online."
 
 def run():
     app.run(host="0.0.0.0", port=8080)
