@@ -23,6 +23,8 @@ tree = bot.tree
 # Kanal-IDs
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
+POST_CHANNEL_ID = 1396969114039226599
+LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
 
 # Rollen und Ränge
 registrierte_user = {}
@@ -47,6 +49,22 @@ RANGLISTE = [
     1396969114031095937,
 ]
 
+# IDs der Polizei-Rollen nach Rang sortiert
+RANK_ROLES = [
+    (1396969114031095937, "🔴 ★★★★★ | Chief of Police"),
+    (1396969114031095936, "🔴 ★★★★ | Assistant Chief"),
+    (1396969114031095935, "🔴 ★★★ | Deputy Chief"),
+    (1396969114031095933, "🔴 ⚙️ | Commander"),
+    (1396969114031095932, "⚪ ✴ | Major"),
+    (1396969114031095931, "🟣 ▮▮▮ | Captain"),
+    (1396969114031095930, "🟣 ▮▮ | First Lieutenant"),
+    (1396969114031095929, "🔵 ▮ | Lieutenant"),
+    (1396969114022711383, "🔵 ▲▲▲ | Sergeant"),
+    (1396969114022711378, "🔵 ▲▮ | II Officer"),
+    (1396969114022711377, "🟢 ~ | Officer"),
+    (1396969114022711376, "🟢 ⚪ | Rekrut"),
+]
+
 BEFUGTE_RANG_IDS = [
     1396969114005930128,
     1396969114031095936,
@@ -55,6 +73,30 @@ BEFUGTE_RANG_IDS = [
 ]
 
 ERLAUBTE_ROLLEN_ID = 1401284034109243557 # Für !loeschen
+
+# =========================
+# 📦 Hilfsfunktion Rangliste
+# =========================
+def build_ranking_embed(guild: discord.Guild) -> discord.Embed:
+    embed = discord.Embed(
+        title="👮‍♂️ Polizei Rangliste (automatisch aktualisiert)",
+        color=discord.Color.dark_blue(),
+        description="📋 Aktueller Stand aller LSPD-Dienstgrade:"
+    )
+    embed.set_thumbnail(url=LOGO_URL)
+    embed.set_footer(
+        text=f"Stand: {discord.utils.format_dt(discord.utils.utcnow(), style='D')}"
+    )
+
+    for role_id, role_name in RANK_ROLES:
+        role = guild.get_role(role_id)
+        if not role:
+            continue
+        members = [member.mention for member in role.members]
+        value = "\n".join(members) if members else "Keine Mitglieder"
+        embed.add_field(name=role_name, value=value, inline=False)
+
+    return embed
 
 # =========================
 # 📡 EVENTS
@@ -68,58 +110,21 @@ async def on_ready():
 
 @bot.event
 async def on_member_update(before, after):
-    # IDs der Polizei-Rollen nach Rang sortiert
-    rank_roles = [
-        (1396969114031095937, "🔴 ★★★★★ | Chief of Police"),
-        (1396969114031095936, "🔴 ★★★★ | Assistant Chief"),
-        (1396969114031095935, "🔴 ★★★ | Deputy Chief"),
-        (1396969114031095933, "🔴 ⚙️ | Commander"),
-        (1396969114031095932, "⚪ ✴ | Major"),
-        (1396969114031095931, "🟣 ▮▮▮ | Captain"),
-        (1396969114031095930, "🟣 ▮▮ | First Lieutenant"),
-        (1396969114031095929, "🔵 ▮ | Lieutenant"),
-        (1396969114022711383, "🔵 ▲▲▲ | Sergeant"),
-        (1396969114022711378, "🔵 ▲▮ | II Officer"),
-        (1396969114022711377, "🟢 ~ | Officer"),
-        (1396969114022711376, "🟢 ⚪ | Rekrut"),
-    ]
-
-    POST_CHANNEL_ID = 1396969114039226599
-    LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
-
     before_roles = set(role.id for role in before.roles)
     after_roles = set(role.id for role in after.roles)
 
     if before_roles == after_roles:
-        return  # Keine Rollenänderung
+        return  # keine Rollenänderung
 
-    # Prüfen ob sich eine der Polizei-Rollen geändert hat
-    role_ids = [r[0] for r in rank_roles]
+    # Prüfen ob eine relevante Rolle betroffen ist
+    role_ids = [r[0] for r in RANK_ROLES]
     if not any((role_id in before_roles) != (role_id in after_roles) for role_id in role_ids):
         return
 
-    guild = after.guild
-    channel = guild.get_channel(POST_CHANNEL_ID)
-    if not channel:
-        return
-
-    embed = discord.Embed(
-        title="👮‍♂️ Polizei Rangliste (automatisch aktualisiert)",
-        color=discord.Color.dark_blue(),
-        description="📋 Aktueller Stand aller LSPD-Dienstgrade:"
-    )
-    embed.set_thumbnail(url=LOGO_URL)
-    embed.set_footer(text=f"Stand: {discord.utils.format_dt(discord.utils.utcnow(), style='D')}")
-
-    for role_id, role_name in rank_roles:
-        role = guild.get_role(role_id)
-        if not role:
-            continue
-        members = [member.mention for member in role.members]
-        value = "\n".join(members) if members else "Keine Mitglieder"
-        embed.add_field(name=role_name, value=value, inline=False)
-
-    await channel.send(embed=embed)
+    channel = after.guild.get_channel(POST_CHANNEL_ID)
+    if channel:
+        embed = build_ranking_embed(after.guild)
+        await channel.send(embed=embed)
 
 @bot.event
 async def on_member_join(member):
@@ -138,9 +143,7 @@ async def on_member_join(member):
             name="Police Department | STRAZE",
             icon_url=member.guild.icon.url if member.guild.icon else None
         )
-        embed.set_image(
-            url="https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png?ex=68910f1b&is=688fbd9b&hm=d0e1c423b694b8097c10138461dae40491b1d883da14b3259f752fe12778364b&"
-        )
+        embed.set_image(url=LOGO_URL)
         embed.set_footer(
             text="Willkommen auf dem Straze Police Department Discord!"
         )
@@ -159,7 +162,6 @@ async def on_member_join(member):
     else:
         print(f"⚠️ Rolle mit ID {auto_role_id} nicht gefunden.")
 
-
 @bot.event
 async def on_member_remove(member):
     channel = member.guild.get_channel(LEAVE_KANAL_ID)
@@ -171,9 +173,7 @@ async def on_member_remove(member):
         description=f"{member.mention} hat den Server verlassen, wir hoffen, wir sehen uns bald wieder!",
         color=discord.Color.dark_grey()
     )
-    embed.set_image(
-        url="https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
-    )
+    embed.set_image(url=LOGO_URL)
     embed.set_author(
         name="Police Department | Blood Life",
         icon_url=member.guild.icon.url if member.guild.icon else None
@@ -210,6 +210,11 @@ async def nachrichten_loeschen(ctx, anzahl: int):
 # =========================
 # ✅ Slash-Befehle
 # =========================
+@tree.command(name="rangliste", description="Zeigt die aktuelle Polizei-Rangliste an.")
+async def rangliste(interaction: discord.Interaction):
+    embed = build_ranking_embed(interaction.guild)
+    await interaction.response.send_message(embed=embed)
+
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
 async def einstellen(interaction: discord.Interaction, user: discord.Member, dienstnummer: str, name: str):
