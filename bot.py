@@ -58,22 +58,6 @@ BEFUGTE_RANG_IDS = [
 ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
 
 # =========================
-# Hilfsfunktion: Ranking Embed bauen (wird im on_member_update gebraucht)
-# =========================
-def build_ranking_embed(guild):
-    embed = discord.Embed(
-        title="🔝 Rangliste",
-        description="Aktuelle Rangliste der Mitglieder:",
-        color=discord.Color.blue()
-    )
-    for rang_id in RANGLISTE:
-        role = guild.get_role(rang_id)
-        if role:
-            members = [m.mention for m in role.members]
-            embed.add_field(name=role.name, value=", ".join(members) or "Keine Mitglieder", inline=False)
-    return embed
-
-# =========================
 # 📡 EVENTS
 # =========================
 @bot.event
