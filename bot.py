@@ -342,10 +342,10 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("❌ Rollenwechsel fehlgeschlagen.", ephemeral=True)
         return
 
-    await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
+    await interaction.response.send_message(f"⬇️ {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
 
 # =========================
-# 🌐 Webserver für Keep-Alive (optional)
+# 🌐 Keep-Alive Webserver
 # =========================
 app = Flask('')
 
@@ -353,20 +353,20 @@ app = Flask('')
 def home():
     return "Bot läuft!"
 
-def run():
+def run_webserver():
     app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
-    thread = threading.Thread(target=run)
+    thread = threading.Thread(target=run_webserver)
     thread.start()
 
 # =========================
-# 🔑 Bot starten
+# 🏁 Bot starten
 # =========================
 if __name__ == "__main__":
     keep_alive()
     TOKEN = os.getenv("DISCORD_BOT_TOKEN")
     if not TOKEN:
-        print("❌ Kein Bot Token gefunden in Umgebungsvariablen.")
+        print("❌ Kein Discord Bot Token gefunden in Umgebungsvariablen!")
     else:
         bot.run(TOKEN)
