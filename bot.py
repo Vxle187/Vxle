@@ -2,12 +2,12 @@
 # LSPD Discord Bot (überarbeitet)
 # ----------------------------------
 
-# bot.py
 import discord
+from discord import app_commands
 from discord.ext import commands
+import os
 from flask import Flask
 import threading
-import os
 
 # =========================
 # 🤖 Discord Bot Setup
@@ -75,8 +75,6 @@ async def on_member_update(before, after):
     if before_roles == after_roles:
         return  # keine Rollenänderung
 
-    # Hier war der Fehler: RANK_ROLES ist nicht definiert.
-    # Ich nehme an, es soll RANGLISTE sein:
     role_ids = RANGLISTE
     if not any((role_id in before_roles) != (role_id in after_roles) for role_id in role_ids):
         return
@@ -292,6 +290,7 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
 # =========================
 # 🌐 Webserver für Keep-Alive (optional)
 # =========================
+
 app = Flask('')
 
 @app.route('/')
@@ -305,17 +304,10 @@ def keep_alive():
     thread = threading.Thread(target=run)
     thread.start()
 
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+# =========================
+# 🔥 Hauptprogramm starten
+# =========================
 
-# =========================
-# 🔑 Bot starten
-# =========================
 if __name__ == "__main__":
     keep_alive()
-    TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-    if not TOKEN:
-        print("❌ Kein Bot Token gefunden in Umgebungsvariablen.")
-    else:
-        bot.run(TOKEN)
+    bot.run(os.environ.get("TOKEN"))
