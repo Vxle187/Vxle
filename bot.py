@@ -74,9 +74,7 @@ BEFUGTE_RANG_IDS = [
 
 ERLAUBTE_ROLLEN_ID = 1401284034109243557 # Für !loeschen
 
-# =========================
 # 📦 Hilfsfunktion Rangliste
-# =========================
 def build_ranking_embed(guild: discord.Guild) -> discord.Embed:
     embed = discord.Embed(
         title="👮‍♂️ Polizei Rangliste (automatisch aktualisiert)",
@@ -92,9 +90,20 @@ def build_ranking_embed(guild: discord.Guild) -> discord.Embed:
         role = guild.get_role(role_id)
         if not role:
             continue
-        members = [member.mention for member in role.members]
+
+        members = []
+        for member in role.members:
+            daten = registrierte_user.get(member.id)
+            if daten:
+                dienstnummer = daten.get("dienstnummer", "").zfill(2)
+                name = daten.get("name", member.display_name)
+                members.append(f"@[{dienstnummer}] {name}")
+            else:
+                members.append(f"{member.mention}")
+
         value = "\n".join(members) if members else "Keine Mitglieder"
-        embed.add_field(name=role_name, value=value, inline=False)
+
+        embed.add_field(name=f"@{role_name}", value=value, inline=False)
 
     return embed
 
@@ -214,6 +223,7 @@ async def nachrichten_loeschen(ctx, anzahl: int):
 async def rangliste(interaction: discord.Interaction):
     embed = build_ranking_embed(interaction.guild)
     await interaction.response.send_message(embed=embed)
+
 
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
