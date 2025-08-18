@@ -55,8 +55,23 @@ BEFUGTE_RANG_IDS = [
     1396969114039226595
 ]
 
-ERLAUBTE_ROLLEN_ID = 1401284034109243557 # Für !loeschen
+ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
 
+# =========================
+# Hilfsfunktion: Ranking Embed bauen (wird im on_member_update gebraucht)
+# =========================
+def build_ranking_embed(guild):
+    embed = discord.Embed(
+        title="🔝 Rangliste",
+        description="Aktuelle Rangliste der Mitglieder:",
+        color=discord.Color.blue()
+    )
+    for rang_id in RANGLISTE:
+        role = guild.get_role(rang_id)
+        if role:
+            members = [m.mention for m in role.members]
+            embed.add_field(name=role.name, value=", ".join(members) or "Keine Mitglieder", inline=False)
+    return embed
 
 # =========================
 # 📡 EVENTS
@@ -76,8 +91,9 @@ async def on_member_update(before, after):
     if before_roles == after_roles:
         return  # keine Rollenänderung
 
-    # Prüfen ob eine relevante Rolle betroffen ist
-    role_ids = [r[0] for r in RANK_ROLES]
+    # Hier war der Fehler: RANK_ROLES ist nicht definiert.
+    # Ich nehme an, es soll RANGLISTE sein:
+    role_ids = RANGLISTE
     if not any((role_id in before_roles) != (role_id in after_roles) for role_id in role_ids):
         return
 
