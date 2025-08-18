@@ -221,8 +221,10 @@ async def nachrichten_loeschen(ctx, anzahl: int):
 # =========================
 @tree.command(name="rangliste", description="Zeigt die aktuelle Polizei-Rangliste an.")
 async def rangliste(interaction: discord.Interaction):
+    await interaction.response.defer()
     embed = build_ranking_embed(interaction.guild)
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
+
 
 
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
