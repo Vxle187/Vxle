@@ -246,19 +246,18 @@ async def uprank(interaction: discord.Interaction, user: discord.Member):
         return
 
     neue_rolle = guild.get_role(RANGLISTE[user_index + 1])
-    aktuelle_rolle = guild.get_role(RANGLISTE[user_index])
+    alte_rolle = guild.get_role(RANGLISTE[user_index])
+
     try:
-        await user.remove_roles(aktuelle_rolle)
+        await user.remove_roles(alte_rolle)
         await user.add_roles(neue_rolle)
+        await interaction.response.send_message(f"🔝 {user.mention} wurde befördert: {alte_rolle.name} → {neue_rolle.name}")
     except discord.Forbidden:
-        await interaction.response.send_message("❌ Rollenwechsel fehlgeschlagen.", ephemeral=True)
-        return
+        await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
 
-    await interaction.response.send_message(f"🎉 {user.mention} wurde befördert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
-
-@tree.command(name="derank", description="Degradiert einen User.")
+@tree.command(name="downrank", description="Degradiert einen User.")
 @app_commands.describe(user="User, der degradiert werden soll")
-async def derank(interaction: discord.Interaction, user: discord.Member):
+async def downrank(interaction: discord.Interaction, user: discord.Member):
     guild = interaction.guild
     invoker = interaction.user
 
@@ -270,44 +269,63 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
     if not user_ränge:
         await interaction.response.send_message(f"{user.mention} hat keine Rangrolle.", ephemeral=True)
         return
-    user_index = max(RANGLISTE.index(r.id) for r in user_ränge)
+    user_index = min(RANGLISTE.index(r.id) for r in user_ränge)
 
     if user_index == 0:
-        await interaction.response.send_message("✅ Nutzer hat bereits den niedrigsten Rang.", ephemeral=True)
+        await interaction.response.send_message("✅ Nutzer hat bereits niedrigsten Rang.", ephemeral=True)
         return
 
     neue_rolle = guild.get_role(RANGLISTE[user_index - 1])
-    aktuelle_rolle = guild.get_role(RANGLISTE[user_index])
+    alte_rolle = guild.get_role(RANGLISTE[user_index])
+
     try:
-        await user.remove_roles(aktuelle_rolle)
+        await user.remove_roles(alte_rolle)
         await user.add_roles(neue_rolle)
+        await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: {alte_rolle.name} → {neue_rolle.name}")
     except discord.Forbidden:
-        await interaction.response.send_message("❌ Rollenwechsel fehlgeschlagen.", ephemeral=True)
-        return
-
-    await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
+        await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
 
 # =========================
-# 🌐 Webserver für Keep-Alive (optional)
+# 🔄 Helper: Rangliste-Embed aktualisieren
 # =========================
+def build_ranking_embed(guild):
+    embed = discord.Embed(
+        title="📈 Rangliste der Mitglieder",
+        description="Aktuelle Verteilung der Ränge im LSPD",
+        color=discord.Color.blue()
+    )
+    for role_id in RANGLISTE:
+        role = guild.get_role(role_id)
+        if role:
+            count = len(role.members)
+            embed.add_field(name=role.name, value=f"Mitglieder: {count}", inline=False)
+    embed.set_footer(text="Straze Police Department")
+    return embed
 
-app = Flask('')
+# =========================
+# 🔄 Flask Webserver (für Keep-Alive)
+# =========================
+app = Flask("")
 
-@app.route('/')
+@app.route("/")
 def home():
-    return "Bot läuft!"
+    return "Bot läuft..."
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host="0.0.0.0", port=8080)
 
 def keep_alive():
     thread = threading.Thread(target=run)
     thread.start()
 
 # =========================
-# 🔥 Hauptprogramm starten
+# 🚀 Start Bot
 # =========================
+keep_alive()
 
-if __name__ == "__main__":
-    keep_alive()
-    bot.run(os.environ.get("TOKEN"))
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Bot Token in Umgebungsvariablen setzen
+
+if not TOKEN:
+    print("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD_BOT_TOKEN.")
+else:
+    bot.run(TOKEN)
