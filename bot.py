@@ -101,7 +101,8 @@ def build_ranking_embed(guild: discord.Guild) -> discord.Embed:
             else:
                 members.append(member.mention)
 
-        value = "\n".join(members) if members else "Keine Mitglieder"
+        # Leerzeile vor der Mitgliederliste
+        value = "\n" + ("\n".join(members) if members else "Keine Mitglieder")
 
         embed.add_field(name=f"@{role_name}", value=value, inline=False)
 
