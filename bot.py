@@ -225,8 +225,6 @@ async def rangliste(interaction: discord.Interaction):
     embed = build_ranking_embed(interaction.guild)
     await interaction.followup.send(embed=embed)
 
-
-
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
 async def einstellen(interaction: discord.Interaction, user: discord.Member, dienstnummer: str, name: str):
@@ -328,10 +326,10 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
     if not user_ränge:
         await interaction.response.send_message(f"{user.mention} hat keine Rangrolle.", ephemeral=True)
         return
-    user_index = max(RANGLISTE.index(r.id) for r in user_ränge)
+    user_index = min(RANGLISTE.index(r.id) for r in user_ränge)
 
-    if user_index == 0:
-        await interaction.response.send_message("✅ Nutzer hat bereits den niedrigsten Rang.", ephemeral=True)
+    if user_index <= 0:
+        await interaction.response.send_message("✅ Nutzer hat bereits niedrigsten Rang.", ephemeral=True)
         return
 
     neue_rolle = guild.get_role(RANGLISTE[user_index - 1])
@@ -343,26 +341,25 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("❌ Rollenwechsel fehlgeschlagen.", ephemeral=True)
         return
 
-    await interaction.response.send_message(f"⬇️ {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
+    await interaction.response.send_message(f"⚠️ {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
 
 # =========================
-# 🌐 Webserver für UptimeRobot
+# 🚀 Bot starten & Webserver für Keep-Alive (optional)
 # =========================
-app = Flask('')
+app = Flask("")
 
-@app.route('/')
+@app.route("/")
 def home():
-    return "✅ Bot is running!"
+    return "Bot ist aktiv!"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host="0.0.0.0", port=8080)
 
 def keep_alive():
     t = threading.Thread(target=run)
     t.start()
 
-# Webserver starten
 keep_alive()
 
-# Bot starten
-bot.run(os.getenv("DISCORD_BOT_TOKEN"))  # Stelle sicher, dass die ENV-Variable gesetzt ist
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Token aus Umgebungsvariable holen
+bot.run(TOKEN)
