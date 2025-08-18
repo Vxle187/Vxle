@@ -2,12 +2,12 @@
 # LSPD Discord Bot (überarbeitet)
 # ----------------------------------
 
+# bot.py
 import discord
-from discord import app_commands
 from discord.ext import commands
-import os
 from flask import Flask
 import threading
+import os
 
 # =========================
 # 🤖 Discord Bot Setup
@@ -292,7 +292,6 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
 # =========================
 # 🌐 Webserver für Keep-Alive (optional)
 # =========================
-
 app = Flask('')
 
 @app.route('/')
@@ -305,6 +304,10 @@ def run():
 def keep_alive():
     thread = threading.Thread(target=run)
     thread.start()
+
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # =========================
 # 🔑 Bot starten
