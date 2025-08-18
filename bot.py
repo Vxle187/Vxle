@@ -101,8 +101,8 @@ def build_ranking_embed(guild: discord.Guild) -> discord.Embed:
             else:
                 members.append(member.mention)
 
-        # Leerzeile vor der Mitgliederliste
-        value = "\n" + ("\n".join(members) if members else "Keine Mitglieder")
+        # Hier ein zusätzlicher Zeilenumbruch vor den Mitgliedern
+        value = "\n\n" + ("\n".join(members) if members else "Keine Mitglieder")
 
         embed.add_field(name=f"@{role_name}", value=value, inline=False)
 
@@ -342,23 +342,23 @@ async def derank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("❌ Rollenwechsel fehlgeschlagen.", ephemeral=True)
         return
 
-    await interaction.response.send_message(f"⬇️ {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
+    await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: `{aktuelle_rolle.name}` ➜ `{neue_rolle.name}`")
 
 # =========================
-# 🕸️ Flask Server für Uptime
+# 🌐 Webserver für Keep-Alive (optional)
 # =========================
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Blood Life Police Bot ist online."
+    return "Bot läuft!"
 
 def run():
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
-    server = threading.Thread(target=run)
-    server.start()
+    thread = threading.Thread(target=run)
+    thread.start()
 
 # =========================
 # 🔑 Bot starten
@@ -366,7 +366,8 @@ def keep_alive():
 if __name__ == "__main__":
     keep_alive()
     TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-    if TOKEN is None:
-        print("❌ Kein Token gefunden. Bitte Umgebungsvariable DISCORD_BOT_TOKEN setzen.")
+    if not TOKEN:
+        print("❌ Kein Bot Token gefunden in Umgebungsvariablen.")
     else:
         bot.run(TOKEN)
+
