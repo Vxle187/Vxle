@@ -98,6 +98,16 @@ async def on_member_update(before, after):
 
     channel = after.guild.get_channel(POST_CHANNEL_ID)
     if channel:
+        # Alte Ranglisten-Nachricht vom Bot suchen und löschen
+        async for msg in channel.history(limit=50):
+            if msg.author == bot.user:
+                if msg.embeds and msg.embeds[0].title == "📈 Rangliste der Mitglieder":
+                    try:
+                        await msg.delete()
+                    except discord.Forbidden:
+                        logging.warning("Keine Berechtigung, alte Nachricht zu löschen.")
+                    break  # nur eine löschen
+
         embed = build_ranking_embed(after.guild)
         await channel.send(embed=embed)
 
@@ -344,11 +354,9 @@ def home():
     return "Bot läuft..."
 
 def run():
-    # Starte Flask-Webserver
     app.run(host="0.0.0.0", port=8080)
 
 def keep_alive():
-    # Flask-Webserver in separatem Thread parallel starten
     thread = threading.Thread(target=run)
     thread.start()
 
@@ -356,12 +364,9 @@ def keep_alive():
 # 🚀 Start Bot
 # =========================
 
-if __name__ == "__main__":
-    keep_alive()  # Starte Webserver parallel
+keep_alive()
 
-    TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Bot Token in Umgebungsvariablen setzen
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Bot Token in Umgebungsvariablen setzen
 
-    if not TOKEN:
-        logging.error("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD_BOT_TOKEN.")
-    else:
-        bot.run(TOKEN)
+if not TOKEN:
+    logging.error("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD
