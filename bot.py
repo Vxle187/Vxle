@@ -339,13 +339,12 @@ from datetime import datetime
 def build_police_ranking_embed(guild):
     embed = discord.Embed(
         title="📈 Unsere Police Officer",
-        description="Hier ist die aktuelle Übersicht des LSPD-Teams:\n\n",
-        color=discord.Color.blue()
+        description="Hier ist die aktuelle Übersicht des LSPD-Teams:\n",
+        color=discord.Color.from_str("#8B0000")  # Dark Red
     )
-
     embed.set_thumbnail(url=LOGO_URL)
 
-    # Wichtig: POLICE_ROLLEN_IDS umdrehen (Chief of Police oben)
+    # Rollen umkehren, damit Chief oben ist
     for role_id in reversed(POLICE_ROLLEN_IDS):
         role = guild.get_role(role_id)
         if not role:
@@ -353,23 +352,26 @@ def build_police_ranking_embed(guild):
 
         members = role.members
         if len(members) == 0:
-            value = "_Keine Mitglieder_\n\u200b"  # \u200b für leere Zeile
+            value = "_Keine Mitglieder_"
         else:
-            value = "\n".join([f"• {member.mention}" for member in members])
-            value += "\n\u200b"  # Leere Zeile am Ende
+            # User mit @mention auflisten
+            value = "\n".join([f"> {member.mention}" for member in members])
 
         embed.add_field(
-            name=f"🪪 {role.name} [{len(members)}]",
+            name=f"**{role.name}** 〔{len(members)}〕",
             value=value,
             inline=False
         )
 
-    # Footer mit Zeit
-    aktuelle_zeit = datetime.now().strftime("%d.%m.%Y – %H:%M Uhr")
-    embed.set_image(url=LOGO_URL)  # Wird automatisch skaliert
-    embed.set_footer(text=f"BloodLife Police Department | Aktualisiert: {aktuelle_zeit}")
+    # Zeitstempel einfügen
+    now = datetime.utcnow().strftime("%d.%m.%Y | %H:%M Uhr")
+    embed.set_footer(text=f"BloodLife Police Department • Aktualisiert: {now}")
+
+    # Optional größeres Bild oben
+    embed.set_image(url=LOGO_URL)
 
     return embed
+
 # =========================
 # Webserver (für Uptime / Keepalive)
 # =========================
