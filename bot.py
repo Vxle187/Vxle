@@ -30,7 +30,7 @@ tree = bot.tree
 SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
-POST_CHANNEL_ID = 1396969114039226599  # Hier der von dir genannte Post-Kanal
+POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal
 LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
 
 # =========================
@@ -39,18 +39,18 @@ LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/140165356
 registrierte_user = {}
 
 POLICE_ROLLEN_IDS = [
-    1396969114022711376,
-    1396969114022711377,
-    1396969114022711378,
-    1396969114022711383,
-    1396969114031095929,
-    1396969114031095930,
-    1396969114031095931,
-    1396969114031095932,
-    1396969114031095933,
-    1396969114031095935,
+    1396969114031095937,  # Chief of Police (oben)
     1396969114031095936,
-    1396969114031095937,
+    1396969114031095935,
+    1396969114031095933,
+    1396969114031095932,
+    1396969114031095931,
+    1396969114031095930,
+    1396969114031095929,
+    1396969114022711383,
+    1396969114022711378,
+    1396969114022711377,
+    1396969114022711376,
 ]
 
 ROLLEN_IDS = [
@@ -86,40 +86,6 @@ async def on_ready():
     logging.info(f"✅ Bot ist online als {bot.user}")
     logging.info("🔍 Geladene Textbefehle: %s", [cmd.name for cmd in bot.commands])
     logging.info("🔧 Slash-Befehle synchronisiert.")
-
-@bot.event
-async def on_member_update(before, after):
-    before_roles = set(role.id for role in before.roles)
-    after_roles = set(role.id for role in after.roles)
-
-    if before_roles == after_roles:
-        return  # Keine Rollenänderung
-
-    # Prüfen, ob sich Police-Rollen geändert haben (hier Beispiel POLICE_ROLLEN_IDS)
-    role_change = any(
-        (role_id in before_roles) != (role_id in after_roles)
-        for role_id in POLICE_ROLLEN_IDS
-    )
-    if not role_change:
-        return
-
-    channel = after.guild.get_channel(CHANNEL_ID)
-    if channel:
-        # Alte Ranglisten-Nachricht löschen
-        async for msg in channel.history(limit=50):
-            if msg.author == bot.user and msg.embeds:
-                if msg.embeds[0].title == "📈 Unsere Police Officer":
-                    try:
-                        await msg.delete()
-                    except discord.Forbidden:
-                        print("Keine Berechtigung, Nachricht zu löschen.")
-                    break
-
-        # Neue Rangliste erstellen (hier musst du deine Funktion nutzen)
-        embed = build_police_ranking_embed(after.guild)
-
-        # Neue Nachricht senden
-        await channel.send(embed=embed)
 
 @bot.event
 async def on_member_update(before, after):
@@ -319,11 +285,11 @@ async def uprank(interaction: discord.Interaction, user: discord.Member):
 
     aktuelle_rolle = user_ränge[0]
     index = POLICE_ROLLEN_IDS.index(aktuelle_rolle.id)
-    if index == len(POLICE_ROLLEN_IDS) - 1:
+    if index == 0:
         await interaction.response.send_message("⚠️ Der Nutzer ist bereits auf dem höchsten Rang.", ephemeral=True)
         return
 
-    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index + 1])
+    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index - 1])
     if neue_rolle:
         await user.remove_roles(aktuelle_rolle)
         await user.add_roles(neue_rolle)
@@ -350,11 +316,11 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
 
     aktuelle_rolle = user_ränge[0]
     index = POLICE_ROLLEN_IDS.index(aktuelle_rolle.id)
-    if index == 0:
+    if index == len(POLICE_ROLLEN_IDS) - 1:
         await interaction.response.send_message("⚠️ Der Nutzer ist bereits auf dem niedrigsten Rang.", ephemeral=True)
         return
 
-    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index - 1])
+    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index + 1])
     if neue_rolle:
         await user.remove_roles(aktuelle_rolle)
         await user.add_roles(neue_rolle)
@@ -365,7 +331,7 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("⚠️ Neue Rolle nicht gefunden.", ephemeral=True)
 
 # =========================
-# Hilfsfunktion: Embed bauen
+# Hilfsfunktion: Embed bauen (mit gedrehter Reihenfolge)
 # =========================
 
 def build_police_ranking_embed(guild):
@@ -376,6 +342,7 @@ def build_police_ranking_embed(guild):
     )
     embed.set_thumbnail(url=LOGO_URL)
 
+    # Reihenfolge so, dass Chief of Police oben steht
     for role_id in POLICE_ROLLEN_IDS:
         role = guild.get_role(role_id)
         if not role:
@@ -417,10 +384,9 @@ def keep_alive():
 
 keep_alive()
 
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Angepasst auf deinen tatsächlichen Variablennamen
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 if not TOKEN:
     logging.error("❌ Kein Bot-Token in den Umgebungsvariablen gefunden!")
     exit(1)
 
 bot.run(TOKEN)
-
