@@ -51,7 +51,7 @@ POLICE_ROLLEN_IDS = [
     1396969114031095931,  # Commander
     1396969114031095932,  # Deputy Chief
     1396969114031095933,  # Assistant Chief
-    1396969114031095934,  # Chief of Police  (Hier mal eine neue ID als Beispiel)
+    1396969114031095934,  # Chief of Police 
 ]
 
 # Neue Reihenfolge (höchster Rang zuerst)
