@@ -119,7 +119,7 @@ async def on_member_join(member):
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
         embed = discord.Embed(
-            title=f"<@{member.id}>, willkommen auf **Straze Police Department** 👮",
+            title=f"<@{member.id}>, willkommen auf **Blood Life Police Department** 👮",
             description=(
                 "📚 **Schön, dass du da bist!**\n"
                 "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
