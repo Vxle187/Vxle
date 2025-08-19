@@ -9,6 +9,7 @@ import os
 from flask import Flask
 import threading
 import logging
+from datetime import datetime  # Für Zeitstempel im Embed
 
 # Logging aktivieren (für bessere Fehlersuche)
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +31,7 @@ tree = bot.tree
 SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
-POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal
+POST_CHANNEL_ID = 1396969114039226599  # Hier der von dir genannte Post-Kanal
 LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
 
 # =========================
@@ -39,18 +40,18 @@ LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/140165356
 registrierte_user = {}
 
 POLICE_ROLLEN_IDS = [
-    1396969114031095937,  # Chief of Police (oben)
-    1396969114031095936,
-    1396969114031095935,
-    1396969114031095933,
-    1396969114031095932,
-    1396969114031095931,
-    1396969114031095930,
-    1396969114031095929,
-    1396969114022711383,
-    1396969114022711378,
-    1396969114022711377,
     1396969114022711376,
+    1396969114022711377,
+    1396969114022711378,
+    1396969114022711383,
+    1396969114031095929,
+    1396969114031095930,
+    1396969114031095931,
+    1396969114031095932,
+    1396969114031095933,
+    1396969114031095935,
+    1396969114031095936,
+    1396969114031095937,
 ]
 
 ROLLEN_IDS = [
@@ -285,11 +286,11 @@ async def uprank(interaction: discord.Interaction, user: discord.Member):
 
     aktuelle_rolle = user_ränge[0]
     index = POLICE_ROLLEN_IDS.index(aktuelle_rolle.id)
-    if index == 0:
+    if index == len(POLICE_ROLLEN_IDS) - 1:
         await interaction.response.send_message("⚠️ Der Nutzer ist bereits auf dem höchsten Rang.", ephemeral=True)
         return
 
-    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index - 1])
+    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index + 1])
     if neue_rolle:
         await user.remove_roles(aktuelle_rolle)
         await user.add_roles(neue_rolle)
@@ -316,11 +317,11 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
 
     aktuelle_rolle = user_ränge[0]
     index = POLICE_ROLLEN_IDS.index(aktuelle_rolle.id)
-    if index == len(POLICE_ROLLEN_IDS) - 1:
+    if index == 0:
         await interaction.response.send_message("⚠️ Der Nutzer ist bereits auf dem niedrigsten Rang.", ephemeral=True)
         return
 
-    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index + 1])
+    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index - 1])
     if neue_rolle:
         await user.remove_roles(aktuelle_rolle)
         await user.add_roles(neue_rolle)
@@ -331,18 +332,17 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("⚠️ Neue Rolle nicht gefunden.", ephemeral=True)
 
 # =========================
-# Hilfsfunktion: Embed bauen (mit gedrehter Reihenfolge)
+# Hilfsfunktion: Embed bauen
 # =========================
 
 def build_police_ranking_embed(guild):
     embed = discord.Embed(
         title="📈 Unsere Police Officer",
         description="Die Übersicht der aktuellen Mitglieder im LSPD",
-        color=discord.Color.dark_blue()
+        color=discord.Color.Dark_red()
     )
     embed.set_thumbnail(url=LOGO_URL)
 
-    # Reihenfolge so, dass Chief of Police oben steht
     for role_id in POLICE_ROLLEN_IDS:
         role = guild.get_role(role_id)
         if not role:
@@ -351,7 +351,8 @@ def build_police_ranking_embed(guild):
         if len(members) == 0:
             value = "_Keine Mitglieder_"
         else:
-            value = "\n".join([f"• {member.display_name}" for member in members])
+            # Mitglieder markieren
+            value = "\n".join([f"• <@{member.id}>" for member in members])
 
         embed.add_field(
             name=f"{role.name} [{len(members)}]",
@@ -359,34 +360,36 @@ def build_police_ranking_embed(guild):
             inline=False
         )
 
-    embed.set_footer(text="BloodLife Police Department")
+    now = datetime.utcnow().strftime("%d.%m.%Y %H:%M UTC")
+    embed.set_footer(text=f"BloodLife Police Department • Aktualisiert: {now}")
     return embed
 
 # =========================
-# Webserver (für Uptime / Keepalive)
+# Flask Webserver (für uptime)
 # =========================
-app = Flask('')
 
-@app.route('/')
+app = Flask("")
+
+@app.route("/")
 def home():
-    return "Bot ist online."
+    return "BloodLife Police Department Bot ist online!"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host="0.0.0.0", port=8080)
 
 def keep_alive():
-    t = threading.Thread(target=run)
-    t.start()
+    thread = threading.Thread(target=run)
+    thread.start()
 
 # =========================
-# Start des Bots
+# Bot starten
 # =========================
 
-keep_alive()
+if __name__ == "__main__":
+    keep_alive()
+    TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+    if not TOKEN:
+        logging.error("❌ Discord Token nicht gesetzt!")
+        exit(1)
+    bot.run(TOKEN)
 
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-if not TOKEN:
-    logging.error("❌ Kein Bot-Token in den Umgebungsvariablen gefunden!")
-    exit(1)
-
-bot.run(TOKEN)
