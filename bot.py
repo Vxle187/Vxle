@@ -365,6 +365,30 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
     else:
         await interaction.response.send_message("⚠️ Neue Rolle nicht gefunden.", ephemeral=True)
 
+@tree.command(name="dienstnummern", description="Zeigt eine Liste aller registrierten Mitglieder mit Dienstnummer.")
+async def dienstnummern(interaction: discord.Interaction):
+    if not registrierte_user:
+        await interaction.response.send_message("📭 Es wurden noch keine Dienstnummern registriert.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="📋 Dienstnummern-Liste",
+        description="Alle registrierten Mitglieder mit Dienstnummer:",
+        color=discord.Color.blue()
+    )
+
+    for user_id, daten in registrierte_user.items():
+        mitglied = interaction.guild.get_member(user_id)
+        if mitglied:
+            embed.add_field(
+                name=f"{mitglied.display_name}",
+                value=f"> 🆔 **Dienstnummer:** `{daten['dienstnummer'].zfill(2)}`\n> 📛 **Name:** `{daten['name']}`",
+                inline=False
+            )
+
+    embed.set_footer(text="BloodLife • Automatisch generierte Liste")
+    await interaction.response.send_message(embed=embed)
+
 # =========================
 # Hilfsfunktion: Embed bauen (mit gedrehter Reihenfolge)
 # =========================
