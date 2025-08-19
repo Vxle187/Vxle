@@ -1,14 +1,11 @@
-# ----------------------------------
-# LSPD Discord Bot (überarbeitet)
-# ----------------------------------
-
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 import os
 from flask import Flask
 import threading
 import logging
+import datetime
 
 # Logging aktivieren (für bessere Fehlersuche)
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +27,7 @@ tree = bot.tree
 SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
-POST_CHANNEL_ID = 1396969114039226599
+POST_CHANNEL_ID = 1396969114039226599  # Kanal für Rangliste
 LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
 
 # =========================
@@ -68,22 +65,81 @@ BEFUGTE_RANG_IDS = [
 ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
 
 # =========================
+# Variable zur Speicherung der letzten Ranglisten-Nachricht
+# =========================
+ranglisten_message_id = None
+
+# =========================
+# 🔄 Helper: Rangliste-Embed erstellen
+# =========================
+
+def build_ranking_embed(guild):
+    embed = discord.Embed(
+        title="📈 Rangliste der Mitglieder",
+        description="Aktuelle Verteilung der Ränge im LSPD",
+        color=discord.Color.blue(),
+        timestamp=datetime.datetime.utcnow()
+    )
+    for role_id in RANGLISTE:
+        role = guild.get_role(role_id)
+        if role:
+            count = len(role.members)
+            embed.add_field(
+                name=f"• {role.name}",
+                value=f"Mitglieder: {count}\n",
+                inline=False
+            )
+    embed.set_thumbnail(url=LOGO_URL)
+    embed.set_footer(text="Straze Police Department")
+    return embed
+
+# =========================
+# 🔄 Task: Rangliste regelmäßig aktualisieren
+# =========================
+
+@tasks.loop(minutes=10)
+async def update_rangliste():
+    global ranglisten_message_id
+    guild = bot.get_guild(SERVER_ID)
+    if not guild:
+        logging.warning(f"Server mit ID {SERVER_ID} nicht gefunden.")
+        return
+
+    channel = guild.get_channel(POST_CHANNEL_ID)
+    if not channel:
+        logging.warning(f"Kanal mit ID {POST_CHANNEL_ID} nicht gefunden.")
+        return
+
+    embed = build_ranking_embed(guild)
+
+    # Alte Nachricht löschen, falls vorhanden
+    if ranglisten_message_id:
+        try:
+            alte_msg = await channel.fetch_message(ranglisten_message_id)
+            await alte_msg.delete()
+            logging.info("Alte Ranglisten-Nachricht gelöscht.")
+        except Exception as e:
+            logging.warning(f"Fehler beim Löschen der alten Ranglisten-Nachricht: {e}")
+
+    # Neue Nachricht senden und ID speichern
+    neue_msg = await channel.send(embed=embed)
+    ranglisten_message_id = neue_msg.id
+    logging.info(f"Neue Ranglisten-Nachricht gesendet mit ID: {ranglisten_message_id}")
+
+# =========================
 # 📡 EVENTS
 # =========================
 
 @bot.event
 async def on_ready():
-    # Prüfen, ob der Bot im richtigen Server ist
     if any(guild.id == SERVER_ID for guild in bot.guilds):
         logging.info(f"✅ Verbunden mit Server ID {SERVER_ID}.")
     else:
         logging.warning(f"❌ Server ID {SERVER_ID} nicht gefunden!")
-    
-    # Slash-Befehle synchronisieren
+
     await tree.sync()
     logging.info(f"✅ Bot ist online als {bot.user}")
-    logging.info("🔍 Geladene Textbefehle: %s", [cmd.name for cmd in bot.commands])
-    logging.info("🔧 Slash-Befehle synchronisiert.")
+    update_rangliste.start()
 
 @bot.event
 async def on_member_update(before, after):
@@ -228,113 +284,15 @@ async def profil(interaction: discord.Interaction):
     user_id = interaction.user.id
     if user_id in registrierte_user:
         daten = registrierte_user[user_id]
-        await interaction.response.send_message(
-            f"🧾 Dein Profil:\n"
-            f"📄 Dienstnummer: `{daten['dienstnummer'].zfill(2)}`\n"
-            f"📛 Name: `{daten['name']}`"
-        )
+        embed = discord.Embed(title=f"Profil von {interaction.user.name}", color=discord.Color.blue())
+        embed.add_field(name="Dienstnummer", value=daten.get("dienstnummer", "Nicht gesetzt"))
+        embed.add_field(name="Name", value=daten.get("name", "Nicht gesetzt"))
+        await interaction.response.send_message(embed=embed)
     else:
-        await interaction.response.send_message("⚠️ Du bist noch nicht registriert. Nutze `/einstellen`.")
-
-@tree.command(name="entlassen", description="Entlässt eine Person vom Server.")
-@app_commands.describe(user="User, der gekickt werden soll", grund="Grund (optional)")
-async def entlassen(interaction: discord.Interaction, user: discord.Member, grund: str = "Kein Grund angegeben"):
-    if user.id == interaction.user.id:
-        await interaction.response.send_message("❌ Du kannst dich nicht selbst entlassen!", ephemeral=True)
-        return
-    try:
-        await user.kick(reason=grund)
-        registrierte_user.pop(user.id, None)
-        await interaction.response.send_message(f"👢 {user.mention} wurde entlassen. Grund: `{grund}`")
-    except discord.Forbidden:
-        await interaction.response.send_message("❌ Keine Berechtigung zum Kicken!", ephemeral=True)
-
-@tree.command(name="uprank", description="Befördert einen User.")
-@app_commands.describe(user="User, der befördert werden soll")
-async def uprank(interaction: discord.Interaction, user: discord.Member):
-    guild = interaction.guild
-    invoker = interaction.user
-
-    if not any(discord.utils.get(invoker.roles, id=r) for r in BEFUGTE_RANG_IDS):
-        await interaction.response.send_message("❌ Keine Berechtigung.", ephemeral=True)
-        return
-
-    user_ränge = [r for r in [guild.get_role(rid) for rid in RANGLISTE] if r in user.roles]
-    if not user_ränge:
-        await interaction.response.send_message(f"{user.mention} hat keine Rangrolle.", ephemeral=True)
-        return
-    user_index = max(RANGLISTE.index(r.id) for r in user_ränge)
-
-    if user_index >= len(RANGLISTE) - 1:
-        await interaction.response.send_message("✅ Nutzer hat bereits höchsten Rang.", ephemeral=True)
-        return
-
-    neue_rolle = guild.get_role(RANGLISTE[user_index + 1])
-    alte_rolle = guild.get_role(RANGLISTE[user_index])
-
-    try:
-        await user.remove_roles(alte_rolle)
-        await user.add_roles(neue_rolle)
-        await interaction.response.send_message(f"🔝 {user.mention} wurde befördert: {alte_rolle.name} → {neue_rolle.name}")
-    except discord.Forbidden:
-        await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
-
-@tree.command(name="downrank", description="Degradiert einen User.")
-@app_commands.describe(user="User, der degradiert werden soll")
-async def downrank(interaction: discord.Interaction, user: discord.Member):
-    guild = interaction.guild
-    invoker = interaction.user
-
-    if not any(discord.utils.get(invoker.roles, id=r) for r in BEFUGTE_RANG_IDS):
-        await interaction.response.send_message("❌ Keine Berechtigung.", ephemeral=True)
-        return
-
-    user_ränge = [r for r in [guild.get_role(rid) for rid in RANGLISTE] if r in user.roles]
-    if not user_ränge:
-        await interaction.response.send_message(f"{user.mention} hat keine Rangrolle.", ephemeral=True)
-        return
-    user_index = min(RANGLISTE.index(r.id) for r in user_ränge)
-
-    if user_index == 0:
-        await interaction.response.send_message("✅ Nutzer hat bereits niedrigsten Rang.", ephemeral=True)
-        return
-
-    neue_rolle = guild.get_role(RANGLISTE[user_index - 1])
-    alte_rolle = guild.get_role(RANGLISTE[user_index])
-
-    try:
-        await user.remove_roles(alte_rolle)
-        await user.add_roles(neue_rolle)
-        await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: {alte_rolle.name} → {neue_rolle.name}")
-    except discord.Forbidden:
-        await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
+        await interaction.response.send_message("❌ Du bist nicht registriert.", ephemeral=True)
 
 # =========================
-# 🔄 Helper: Rangliste-Embed aktualisieren
-# =========================
-
-def build_ranking_embed(guild):
-    embed = discord.Embed(
-        title="📈 Rangliste der Mitglieder",
-        description="Aktuelle Verteilung der Ränge im LSPD",
-        color=discord.Color.blue()
-    )
-    for role_id in RANGLISTE:
-        role = guild.get_role(role_id)
-        if role:
-            count = len(role.members)
-            embed.add_field(
-                name=f"• {role.name}",
-                value=f"Mitglieder: {count}\n",
-                inline=False
-            )
-
-    embed.set_thumbnail(url="https://static.wikia.nocookie.net/arab-fivem/images/8/8f/Los_Santos_Police_Department.png")
-    embed.set_footer(text="Straze Police Department")
-    return embed
-
-# =========================
-# 🔄 Flask Webserver (für Keep-Alive)
+# Flask Webserver (für Keep-Alive)
 # =========================
 
 app = Flask("")
@@ -351,12 +309,12 @@ def keep_alive():
     thread.start()
 
 # =========================
-# 🚀 Start Bot
+# Bot starten
 # =========================
 
 keep_alive()
 
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Bot Token in Umgebungsvariablen setzen
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 if not TOKEN:
     logging.error("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD_BOT_TOKEN.")
