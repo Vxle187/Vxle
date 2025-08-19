@@ -41,18 +41,17 @@ registrierte_user = {}
 # Alte Reihenfolge (von niedrigstem zu höchstem Rang)
 
 POLICE_ROLLEN_IDS = [
-    1396969114031095937,  # Chief of Police
-    1396969114031095936,  # Assistant Chief
-    1396969114031095935,  # Deputy Chief
-    1396969114031095933,  # Commander
-    1396969114031095932,  # Major
-    1396969114031095931,  # Captain
-    1396969114031095930,  # First Lieutenant
-    1396969114031095929,  # Lieutenant (bitte doppelte ID prüfen!)
-    1396969114022711383,  # Sergeant
-    1396969114022711378,  # Officer II
+    1396969114022711376,  # Rekrut
     1396969114022711377,  # Officer I
-    1396969114022711376,  # Rekrut (bitte auch prüfen)
+    1396969114022711378,  # Officer II
+    1396969114031095929,  # Lieutenant
+    1396969114031095930,  # First Lieutenant
+    1396969114031095931,  # Captain
+    1396969114031095932,  # Major
+    1396969114031095933,  # Commander
+    1396969114031095931,  # Deputy Chief (prüfe die ID hier, evtl. Fehler)
+    1396969114031095932,  # Assistant Chief (prüfe die ID hier, evtl. Fehler)
+    1396969114031095933,  # Chief of Police (prüfe die ID hier, evtl. Fehler)
 ]
 
 # Neue Reihenfolge (höchster Rang zuerst)
