@@ -383,7 +383,7 @@ def keep_alive():
 
 keep_alive()
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 if not TOKEN:
     logging.error("❌ Kein Bot-Token in den Umgebungsvariablen gefunden!")
     exit(1)
