@@ -187,6 +187,35 @@ async def on_member_remove(member):
     embed.set_footer(text="Auf Wiedersehen.")
     await channel.send(embed=embed)
 
+@bot.event
+async def on_message(message):
+    EINSTELLUNGSKANAL_ID = 1396969115813544127  # Der Kanal, in dem /einstellen verwendet wird
+
+    if message.author == bot.user:
+        return
+
+    if message.channel.id == EINSTELLUNGSKANAL_ID:
+        try:
+            channel = message.guild.get_channel(POST_CHANNEL_ID)
+            if channel:
+                # Alte Ranglisten-Nachricht löschen
+                async for msg in channel.history(limit=50):
+                    if msg.author == bot.user and msg.embeds:
+                        embed = msg.embeds[0]
+                        if embed.title == "📈 Unsere Police Officer":
+                            try:
+                                await msg.delete()
+                            except discord.Forbidden:
+                                logging.warning("Keine Berechtigung, alte Nachricht zu löschen.")
+                            break
+
+                embed = build_police_ranking_embed(message.guild)
+                await channel.send(embed=embed)
+        except Exception as e:
+            logging.error(f"Fehler bei automatischer Ranglisten-Aktualisierung: {e}")
+
+    # Damit Slash- und Prefix-Befehle weiterhin funktionieren
+    await bot.process_commands(message)
 # =========================
 # 🧹 Text-Befehle: !loeschen und !löschen
 # =========================
