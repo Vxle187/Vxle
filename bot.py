@@ -39,17 +39,20 @@ LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/140165356
 registrierte_user = {}
 
 # Alte Reihenfolge (von niedrigstem zu höchstem Rang)
-POLICE_ROLLEN_IDS = [
 
-    1396969114022711377,  # Officer I
-    1396969114022711378,  # Officer II
-    1396969114022711383,  # Sergeant 
-    1396969114031095929,  # Lieutenant
+POLICE_ROLLEN_IDS = [
+    1396969114031095937,  # Chief of Police
+    1396969114031095936,  # Assistant Chief
+    1396969114031095935,  # Deputy Chief
+    1396969114031095933,  # Commander
+    1396969114031095932,  # Major
+    1396969114031095931,  # Captain
     1396969114031095930,  # First Lieutenant
-    1396969114031095932,  # Captain
-    1396969114031095932,  # Deputy Chief
-    1396969114031095933,  # Assistant Chief
-    1396969114031095934,  # Chief of Police 
+    1396969114031095929,  # Lieutenant (bitte doppelte ID prüfen!)
+    1396969114022711383,  # Sergeant
+    1396969114022711378,  # Officer II
+    1396969114022711377,  # Officer I
+    1396969114022711376,  # Rekrut (bitte auch prüfen)
 ]
 
 # Neue Reihenfolge (höchster Rang zuerst)
