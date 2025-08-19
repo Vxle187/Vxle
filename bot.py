@@ -20,7 +20,11 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
-# Kanal-IDs
+# =========================
+# Server und Kanal IDs
+# =========================
+SERVER_ID = 1396969113955602562  # Deine Server-ID
+
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
 POST_CHANNEL_ID = 1396969114039226599
@@ -48,6 +52,7 @@ RANGLISTE = [
     1396969114031095936,
     1396969114031095937,
 ]
+
 BEFUGTE_RANG_IDS = [
     1396969114005930128,
     1396969114031095936,
@@ -60,6 +65,7 @@ ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
 # =========================
 # 📡 EVENTS
 # =========================
+
 @bot.event
 async def on_ready():
     await tree.sync()
@@ -69,6 +75,9 @@ async def on_ready():
 
 @bot.event
 async def on_member_update(before, after):
+    if after.guild.id != SERVER_ID:
+        return
+
     before_roles = set(role.id for role in before.roles)
     after_roles = set(role.id for role in after.roles)
 
@@ -86,6 +95,9 @@ async def on_member_update(before, after):
 
 @bot.event
 async def on_member_join(member):
+    if member.guild.id != SERVER_ID:
+        return
+
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
         embed = discord.Embed(
@@ -122,6 +134,9 @@ async def on_member_join(member):
 
 @bot.event
 async def on_member_remove(member):
+    if member.guild.id != SERVER_ID:
+        return
+
     channel = member.guild.get_channel(LEAVE_KANAL_ID)
     if not channel:
         return
@@ -142,12 +157,17 @@ async def on_member_remove(member):
 # =========================
 # 🧹 Text-Befehle: !loeschen und !löschen
 # =========================
+
 @bot.command(name='loeschen')
 async def loeschen(ctx, anzahl: int):
+    if ctx.guild.id != SERVER_ID:
+        return
     await nachrichten_loeschen(ctx, anzahl)
 
 @bot.command(name='löschen')
 async def löschen_umlaut(ctx, anzahl: int):
+    if ctx.guild.id != SERVER_ID:
+        return
     await nachrichten_loeschen(ctx, anzahl)
 
 async def nachrichten_loeschen(ctx, anzahl: int):
@@ -172,6 +192,10 @@ async def nachrichten_loeschen(ctx, anzahl: int):
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
 async def einstellen(interaction: discord.Interaction, user: discord.Member, dienstnummer: str, name: str):
+    if interaction.guild.id != SERVER_ID:
+        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
+        return
+
     guild = interaction.guild
     registrierte_user[user.id] = {"dienstnummer": dienstnummer, "name": name}
 
@@ -201,6 +225,10 @@ async def einstellen(interaction: discord.Interaction, user: discord.Member, die
 
 @tree.command(name="profil", description="Zeigt dein Profil an.")
 async def profil(interaction: discord.Interaction):
+    if interaction.guild.id != SERVER_ID:
+        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
+        return
+
     user_id = interaction.user.id
     if user_id in registrierte_user:
         daten = registrierte_user[user_id]
@@ -215,6 +243,10 @@ async def profil(interaction: discord.Interaction):
 @tree.command(name="entlassen", description="Entlässt eine Person vom Server.")
 @app_commands.describe(user="User, der gekickt werden soll", grund="Grund (optional)")
 async def entlassen(interaction: discord.Interaction, user: discord.Member, grund: str = "Kein Grund angegeben"):
+    if interaction.guild.id != SERVER_ID:
+        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
+        return
+
     if user.id == interaction.user.id:
         await interaction.response.send_message("❌ Du kannst dich nicht selbst entlassen!", ephemeral=True)
         return
@@ -228,6 +260,10 @@ async def entlassen(interaction: discord.Interaction, user: discord.Member, grun
 @tree.command(name="uprank", description="Befördert einen User.")
 @app_commands.describe(user="User, der befördert werden soll")
 async def uprank(interaction: discord.Interaction, user: discord.Member):
+    if interaction.guild.id != SERVER_ID:
+        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
+        return
+
     guild = interaction.guild
     invoker = interaction.user
 
@@ -258,6 +294,10 @@ async def uprank(interaction: discord.Interaction, user: discord.Member):
 @tree.command(name="downrank", description="Degradiert einen User.")
 @app_commands.describe(user="User, der degradiert werden soll")
 async def downrank(interaction: discord.Interaction, user: discord.Member):
+    if interaction.guild.id != SERVER_ID:
+        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
+        return
+
     guild = interaction.guild
     invoker = interaction.user
 
@@ -288,6 +328,7 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
 # =========================
 # 🔄 Helper: Rangliste-Embed aktualisieren
 # =========================
+
 def build_ranking_embed(guild):
     embed = discord.Embed(
         title="📈 Rangliste der Mitglieder",
@@ -303,19 +344,16 @@ def build_ranking_embed(guild):
                 value=f"Mitglieder: {count}\n",  # Abstand zwischen Feldern
                 inline=False
             )
+
+    # Thumbnail Bild oben rechts
     embed.set_thumbnail(url="https://static.wikia.nocookie.net/arab-fivem/images/8/8f/Los_Santos_Police_Department.png")
     embed.set_footer(text="Straze Police Department")
     return embed
 
-# Neuer Slash-Befehl /rangliste
-@tree.command(name="rangliste", description="Zeigt die Rangliste an.")
-async def rangliste(interaction: discord.Interaction):
-    embed = build_ranking_embed(interaction.guild)
-    await interaction.response.send_message(embed=embed)
-
 # =========================
 # 🔄 Flask Webserver (für Keep-Alive)
 # =========================
+
 app = Flask("")
 
 @app.route("/")
@@ -332,6 +370,7 @@ def keep_alive():
 # =========================
 # 🚀 Start Bot
 # =========================
+
 keep_alive()
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Bot Token in Umgebungsvariablen setzen
@@ -340,3 +379,4 @@ if not TOKEN:
     print("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD_BOT_TOKEN.")
 else:
     bot.run(TOKEN)
+
