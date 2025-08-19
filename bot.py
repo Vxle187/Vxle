@@ -44,18 +44,18 @@ ROLLEN_IDS = [
 ]
 
 RANGLISTE = [
-    1396969114022711376,
-    1396969114022711377,
-    1396969114022711378,
-    1396969114022711383,
-    1396969114031095929,
-    1396969114031095930,
-    1396969114031095931,
-    1396969114031095932,
-    1396969114031095933,
-    1396969114031095935,
-    1396969114031095936,
-    1396969114031095937,
+    1396969114022711376,  # Chief of Police
+    1396969114022711377,  # Assistant Chief
+    1396969114022711378,  # Deputy Chief
+    1396969114022711383,  # Commander
+    1396969114031095929,  # Major
+    1396969114031095930,  # Captain
+    1396969114031095931,  # First Lieutenant
+    1396969114031095932,  # Lieutenant
+    1396969114031095933,  # Sergeant
+    1396969114031095935,  # II Officer
+    1396969114031095936,  # Officer
+    1396969114031095937,  # Rekrut
 ]
 
 BEFUGTE_RANG_IDS = [
@@ -78,7 +78,7 @@ async def on_ready():
         logging.info(f"✅ Verbunden mit Server ID {SERVER_ID}.")
     else:
         logging.warning(f"❌ Server ID {SERVER_ID} nicht gefunden!")
-    
+
     # Slash-Befehle synchronisieren
     await tree.sync()
     logging.info(f"✅ Bot ist online als {bot.user}")
@@ -99,18 +99,13 @@ async def on_member_update(before, after):
     channel = after.guild.get_channel(POST_CHANNEL_ID)
     if channel:
         embed = build_ranking_embed(after.guild)
-        # Vorherige Ranglisten-Nachricht löschen (letzte Nachricht im Kanal, falls vom Bot)
-        async for message in channel.history(limit=10):
-            if message.author == bot.user and message.embeds:
-                await message.delete()
-                break
         await channel.send(embed=embed)
 
 @bot.event
 async def on_member_join(member):
     if member.guild.id != SERVER_ID:
         return
-    
+
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
         embed = discord.Embed(
@@ -149,7 +144,7 @@ async def on_member_join(member):
 async def on_member_remove(member):
     if member.guild.id != SERVER_ID:
         return
-    
+
     channel = member.guild.get_channel(LEAVE_KANAL_ID)
     if not channel:
         return
@@ -300,8 +295,8 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
         return
     user_index = min(RANGLISTE.index(r.id) for r in user_ränge)
 
-    if user_index == 0:
-        await interaction.response.send_message("✅ Nutzer hat bereits niedrigsten Rang.", ephemeral=True)
+    if user_index <= 0:
+        await interaction.response.send_message("⚠️ Nutzer hat bereits den niedrigsten Rang.", ephemeral=True)
         return
 
     neue_rolle = guild.get_role(RANGLISTE[user_index - 1])
@@ -310,62 +305,101 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
     try:
         await user.remove_roles(alte_rolle)
         await user.add_roles(neue_rolle)
-        await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: {alte_rolle.name} → {neue_rolle.name}")
+        await interaction.response.send_message(f"⬇️ {user.mention} wurde degradiert: {alte_rolle.name} → {neue_rolle.name}")
     except discord.Forbidden:
         await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
 
-# =========================
-# 🔄 Helper: Rangliste-Embed aktualisieren
-# =========================
+@tree.command(name="rangliste", description="Zeigt die Rangliste an.")
+async def rangliste(interaction: discord.Interaction):
+    embed = build_ranking_embed(interaction.guild)
+    await interaction.response.send_message(embed=embed)
 
+# =========================
+# Funktion zum Erstellen des Ranglisten-Embeds
+# =========================
 def build_ranking_embed(guild):
     embed = discord.Embed(
-        title="📈 Rangliste der Mitglieder",
-        description="Aktuelle Verteilung der Ränge im LSPD",
-        color=discord.Color.blue()
+        title="👮 Polizei Rangliste (automatisch aktualisiert)",
+        description="📋 Aktueller Stand aller LSPD-Dienstgrade:",
+        color=discord.Color.dark_blue()
     )
-    
+    embed.set_thumbnail(url=LOGO_URL)
+
+    rang_emojis = {
+        1396969114022711376: "🔴 ⭐⭐⭐⭐⭐",  # Chief of Police
+        1396969114022711377: "🔴 ⭐⭐⭐⭐",
+        1396969114022711378: "🔴 ⭐⭐⭐",
+        1396969114022711383: "🔴 ⚙️",
+        1396969114031095929: "⚪ 🌟",
+        1396969114031095930: "🟣 ▇▇▇",
+        1396969114031095931: "🟣 ▇▇",
+        1396969114031095932: "🔵 ▇",
+        1396969114031095933: "🔵 ▲▲▲",
+        1396969114031095935: "🔵 ▲▢",
+        1396969114031095936: "🟢 ~",
+        1396969114031095937: "🟢 ○",
+    }
+
+    rang_names = {
+        1396969114022711376: "Chief of Police",
+        1396969114022711377: "Assistant Chief",
+        1396969114022711378: "Deputy Chief",
+        1396969114022711383: "Commander",
+        1396969114031095929: "Major",
+        1396969114031095930: "Captain",
+        1396969114031095931: "First Lieutenant",
+        1396969114031095932: "Lieutenant",
+        1396969114031095933: "Sergeant",
+        1396969114031095935: "II Officer",
+        1396969114031095936: "Officer",
+        1396969114031095937: "Rekrut",
+    }
+
     for role_id in RANGLISTE:
         role = guild.get_role(role_id)
-        if role:
-            count = len(role.members)
-            embed.add_field(
-                name=f"• {role.name}",
-                value=f"{count} Leute",
-                inline=True  # Felder nebeneinander für breitere Ansicht
-            )
+        if not role:
+            continue
+        emoji = rang_emojis.get(role_id, "")
+        name = rang_names.get(role_id, role.name)
 
-    embed.set_thumbnail(url="https://static.wikia.nocookie.net/arab-fivem/images/8/8f/Los_Santos_Police_Department.png")
-    embed.set_footer(text="Straze Police Department")
+        if len(role.members) > 0:
+            max_anzeigen = 5
+            member_mentions = [member.mention for member in role.members[:max_anzeigen]]
+            rest = len(role.members) - max_anzeigen
+            if rest > 0:
+                member_mentions.append(f"und {rest} weitere")
+            mitglieder_text = "\n".join(member_mentions)
+        else:
+            mitglieder_text = "Keine Mitglieder"
+
+        embed.add_field(
+            name=f"{emoji} | {name}",
+            value=mitglieder_text,
+            inline=False
+        )
+
+    embed.set_footer(text=f"Stand: <t:{int(discord.utils.utcnow().timestamp())}:D>")
 
     return embed
 
 # =========================
-# 🔄 Flask Webserver (für Keep-Alive)
+# Flask-Webserver (für uptime-kontrolle)
 # =========================
+app = Flask('')
 
-app = Flask("")
-
-@app.route("/")
+@app.route('/')
 def home():
-    return "Bot läuft..."
+    return "Server läuft!"
 
 def run():
     app.run(host="0.0.0.0", port=8080)
 
 def keep_alive():
-    thread = threading.Thread(target=run)
-    thread.start()
+    t = threading.Thread(target=run)
+    t.start()
 
 # =========================
-# 🚀 Start Bot
+# Bot starten
 # =========================
-
 keep_alive()
-
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Bot Token in Umgebungsvariablen setzen
-
-if not TOKEN:
-    logging.error("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD_BOT_TOKEN.")
-else:
-    bot.run(TOKEN)
+bot.run(os.environ['TOKEN'])
