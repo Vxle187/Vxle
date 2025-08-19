@@ -339,7 +339,7 @@ def build_police_ranking_embed(guild):
     embed = discord.Embed(
         title="📈 Unsere Police Officer",
         description="Die Übersicht der aktuellen Mitglieder im LSPD",
-        color=discord.Color.Dark_red()
+        color=discord.Color.dark_red()
     )
     embed.set_thumbnail(url=LOGO_URL)
 
