@@ -8,6 +8,10 @@ from discord.ext import commands
 import os
 from flask import Flask
 import threading
+import logging
+
+# Logging aktivieren (für bessere Fehlersuche)
+logging.basicConfig(level=logging.INFO)
 
 # =========================
 # 🤖 Discord Bot Setup
@@ -21,16 +25,17 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
 # =========================
-# Server und Kanal IDs
+# Server und Kanal-IDs
 # =========================
 SERVER_ID = 1396969113955602562  # Deine Server-ID
-
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
 POST_CHANNEL_ID = 1396969114039226599
 LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
 
+# =========================
 # Rollen und Ränge
+# =========================
 registrierte_user = {}
 
 ROLLEN_IDS = [
@@ -68,24 +73,27 @@ ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
 
 @bot.event
 async def on_ready():
+    # Prüfen, ob der Bot im richtigen Server ist
+    if any(guild.id == SERVER_ID for guild in bot.guilds):
+        logging.info(f"✅ Verbunden mit Server ID {SERVER_ID}.")
+    else:
+        logging.warning(f"❌ Server ID {SERVER_ID} nicht gefunden!")
+    
+    # Slash-Befehle synchronisieren
     await tree.sync()
-    print(f"✅ Bot ist online als {bot.user}")
-    print("🔍 Geladene Textbefehle:", [cmd.name for cmd in bot.commands])
-    print("🔧 Slash-Befehle synchronisiert.")
+    logging.info(f"✅ Bot ist online als {bot.user}")
+    logging.info("🔍 Geladene Textbefehle: %s", [cmd.name for cmd in bot.commands])
+    logging.info("🔧 Slash-Befehle synchronisiert.")
 
 @bot.event
 async def on_member_update(before, after):
-    if after.guild.id != SERVER_ID:
-        return
-
     before_roles = set(role.id for role in before.roles)
     after_roles = set(role.id for role in after.roles)
 
     if before_roles == after_roles:
         return  # keine Rollenänderung
 
-    role_ids = RANGLISTE
-    if not any((role_id in before_roles) != (role_id in after_roles) for role_id in role_ids):
+    if not any((role_id in before_roles) != (role_id in after_roles) for role_id in RANGLISTE):
         return
 
     channel = after.guild.get_channel(POST_CHANNEL_ID)
@@ -97,7 +105,7 @@ async def on_member_update(before, after):
 async def on_member_join(member):
     if member.guild.id != SERVER_ID:
         return
-
+    
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
         embed = discord.Embed(
@@ -124,19 +132,19 @@ async def on_member_join(member):
     if role:
         try:
             await member.add_roles(role)
-            print(f"✅ Rolle '{role.name}' wurde an {member} vergeben.")
+            logging.info(f"✅ Rolle '{role.name}' wurde an {member} vergeben.")
         except discord.Forbidden:
-            print(f"❌ Keine Berechtigung, um {member} die Rolle zu geben.")
+            logging.warning(f"❌ Keine Berechtigung, um {member} die Rolle zu geben.")
         except discord.HTTPException as e:
-            print(f"❌ Fehler beim Vergeben der Rolle an {member}: {e}")
+            logging.warning(f"❌ Fehler beim Vergeben der Rolle an {member}: {e}")
     else:
-        print(f"⚠️ Rolle mit ID {auto_role_id} nicht gefunden.")
+        logging.warning(f"⚠️ Rolle mit ID {auto_role_id} nicht gefunden.")
 
 @bot.event
 async def on_member_remove(member):
     if member.guild.id != SERVER_ID:
         return
-
+    
     channel = member.guild.get_channel(LEAVE_KANAL_ID)
     if not channel:
         return
@@ -160,14 +168,10 @@ async def on_member_remove(member):
 
 @bot.command(name='loeschen')
 async def loeschen(ctx, anzahl: int):
-    if ctx.guild.id != SERVER_ID:
-        return
     await nachrichten_loeschen(ctx, anzahl)
 
 @bot.command(name='löschen')
 async def löschen_umlaut(ctx, anzahl: int):
-    if ctx.guild.id != SERVER_ID:
-        return
     await nachrichten_loeschen(ctx, anzahl)
 
 async def nachrichten_loeschen(ctx, anzahl: int):
@@ -192,10 +196,6 @@ async def nachrichten_loeschen(ctx, anzahl: int):
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
 async def einstellen(interaction: discord.Interaction, user: discord.Member, dienstnummer: str, name: str):
-    if interaction.guild.id != SERVER_ID:
-        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
-        return
-
     guild = interaction.guild
     registrierte_user[user.id] = {"dienstnummer": dienstnummer, "name": name}
 
@@ -225,10 +225,6 @@ async def einstellen(interaction: discord.Interaction, user: discord.Member, die
 
 @tree.command(name="profil", description="Zeigt dein Profil an.")
 async def profil(interaction: discord.Interaction):
-    if interaction.guild.id != SERVER_ID:
-        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
-        return
-
     user_id = interaction.user.id
     if user_id in registrierte_user:
         daten = registrierte_user[user_id]
@@ -243,10 +239,6 @@ async def profil(interaction: discord.Interaction):
 @tree.command(name="entlassen", description="Entlässt eine Person vom Server.")
 @app_commands.describe(user="User, der gekickt werden soll", grund="Grund (optional)")
 async def entlassen(interaction: discord.Interaction, user: discord.Member, grund: str = "Kein Grund angegeben"):
-    if interaction.guild.id != SERVER_ID:
-        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
-        return
-
     if user.id == interaction.user.id:
         await interaction.response.send_message("❌ Du kannst dich nicht selbst entlassen!", ephemeral=True)
         return
@@ -260,10 +252,6 @@ async def entlassen(interaction: discord.Interaction, user: discord.Member, grun
 @tree.command(name="uprank", description="Befördert einen User.")
 @app_commands.describe(user="User, der befördert werden soll")
 async def uprank(interaction: discord.Interaction, user: discord.Member):
-    if interaction.guild.id != SERVER_ID:
-        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
-        return
-
     guild = interaction.guild
     invoker = interaction.user
 
@@ -294,10 +282,6 @@ async def uprank(interaction: discord.Interaction, user: discord.Member):
 @tree.command(name="downrank", description="Degradiert einen User.")
 @app_commands.describe(user="User, der degradiert werden soll")
 async def downrank(interaction: discord.Interaction, user: discord.Member):
-    if interaction.guild.id != SERVER_ID:
-        await interaction.response.send_message("Dieser Befehl kann nur auf dem LSPD-Server verwendet werden.", ephemeral=True)
-        return
-
     guild = interaction.guild
     invoker = interaction.user
 
@@ -341,11 +325,10 @@ def build_ranking_embed(guild):
             count = len(role.members)
             embed.add_field(
                 name=f"• {role.name}",
-                value=f"Mitglieder: {count}\n",  # Abstand zwischen Feldern
+                value=f"Mitglieder: {count}\n",
                 inline=False
             )
 
-    # Thumbnail Bild oben rechts
     embed.set_thumbnail(url="https://static.wikia.nocookie.net/arab-fivem/images/8/8f/Los_Santos_Police_Department.png")
     embed.set_footer(text="Straze Police Department")
     return embed
@@ -376,7 +359,6 @@ keep_alive()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Bot Token in Umgebungsvariablen setzen
 
 if not TOKEN:
-    print("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD_BOT_TOKEN.")
+    logging.error("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD_BOT_TOKEN.")
 else:
     bot.run(TOKEN)
-
