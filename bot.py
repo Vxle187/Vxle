@@ -93,6 +93,7 @@ async def on_member_update(before, after):
     if before_roles == after_roles:
         return  # keine Rollenänderung
 
+    # Nur reagieren, wenn Ranglisten-Rollen sich geändert haben
     if not any((role_id in before_roles) != (role_id in after_roles) for role_id in RANGLISTE):
         return
 
