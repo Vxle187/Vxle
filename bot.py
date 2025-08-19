@@ -56,7 +56,7 @@ POLICE_ROLLEN_IDS = [
 ]
 
 # Neue Reihenfolge (höchster Rang zuerst)
-POLICE_ROLLEN_IDS = list(POLICE_ROLLEN_IDS)
+POLICE_ROLLEN_IDS = list(reversed(POLICE_ROLLEN_IDS))
 
 
 
