@@ -381,10 +381,11 @@ def keep_alive():
 # Start des Bots
 # =========================
 
-if __name__ == "__main__":
-    keep_alive()
-    TOKEN = os.getenv("DISCORD_TOKEN")
-    if not TOKEN:
-        logging.error("❌ Kein Bot-Token in den Umgebungsvariablen gefunden!")
-        exit(1)
-    bot.run(TOKEN)
+keep_alive()
+
+TOKEN = os.getenv("DISCORD_TOKEN")
+if not TOKEN:
+    logging.error("❌ Kein Bot-Token in den Umgebungsvariablen gefunden!")
+    exit(1)
+
+bot.run(TOKEN)
