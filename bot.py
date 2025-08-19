@@ -44,18 +44,18 @@ ROLLEN_IDS = [
 ]
 
 RANGLISTE = [
-    1396969114022711376,  # Chief of Police
-    1396969114022711377,  # Assistant Chief
-    1396969114022711378,  # Deputy Chief
-    1396969114022711383,  # Commander
-    1396969114031095929,  # Major
-    1396969114031095930,  # Captain
-    1396969114031095931,  # First Lieutenant
-    1396969114031095932,  # Lieutenant
-    1396969114031095933,  # Sergeant
-    1396969114031095935,  # II Officer
-    1396969114031095936,  # Officer
-    1396969114031095937,  # Rekrut
+    1396969114022711376,
+    1396969114022711377,
+    1396969114022711378,
+    1396969114022711383,
+    1396969114031095929,
+    1396969114031095930,
+    1396969114031095931,
+    1396969114031095932,
+    1396969114031095933,
+    1396969114031095935,
+    1396969114031095936,
+    1396969114031095937,
 ]
 
 BEFUGTE_RANG_IDS = [
@@ -73,13 +73,11 @@ ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
 
 @bot.event
 async def on_ready():
-    # Prüfen, ob der Bot im richtigen Server ist
     if any(guild.id == SERVER_ID for guild in bot.guilds):
         logging.info(f"✅ Verbunden mit Server ID {SERVER_ID}.")
     else:
         logging.warning(f"❌ Server ID {SERVER_ID} nicht gefunden!")
 
-    # Slash-Befehle synchronisieren
     await tree.sync()
     logging.info(f"✅ Bot ist online als {bot.user}")
     logging.info("🔍 Geladene Textbefehle: %s", [cmd.name for cmd in bot.commands])
@@ -91,7 +89,7 @@ async def on_member_update(before, after):
     after_roles = set(role.id for role in after.roles)
 
     if before_roles == after_roles:
-        return  # keine Rollenänderung
+        return
 
     if not any((role_id in before_roles) != (role_id in after_roles) for role_id in RANGLISTE):
         return
@@ -295,8 +293,8 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
         return
     user_index = min(RANGLISTE.index(r.id) for r in user_ränge)
 
-    if user_index <= 0:
-        await interaction.response.send_message("⚠️ Nutzer hat bereits den niedrigsten Rang.", ephemeral=True)
+    if user_index == 0:
+        await interaction.response.send_message("✅ Nutzer hat bereits niedrigsten Rang.", ephemeral=True)
         return
 
     neue_rolle = guild.get_role(RANGLISTE[user_index - 1])
@@ -305,17 +303,12 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
     try:
         await user.remove_roles(alte_rolle)
         await user.add_roles(neue_rolle)
-        await interaction.response.send_message(f"⬇️ {user.mention} wurde degradiert: {alte_rolle.name} → {neue_rolle.name}")
+        await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: {alte_rolle.name} → {neue_rolle.name}")
     except discord.Forbidden:
         await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
 
-@tree.command(name="rangliste", description="Zeigt die Rangliste an.")
-async def rangliste(interaction: discord.Interaction):
-    embed = build_ranking_embed(interaction.guild)
-    await interaction.response.send_message(embed=embed)
-
 # =========================
-# Funktion zum Erstellen des Ranglisten-Embeds
+# Funktion zur Rangliste (embed)
 # =========================
 def build_ranking_embed(guild):
     embed = discord.Embed(
@@ -368,38 +361,39 @@ def build_ranking_embed(guild):
             rest = len(role.members) - max_anzeigen
             if rest > 0:
                 member_mentions.append(f"und {rest} weitere")
-            mitglieder_text = "\n".join(member_mentions)
+            mitglieder_text = " ".join(member_mentions)
+            value_text = mitglieder_text
         else:
-            mitglieder_text = "Keine Mitglieder"
+            # Keine Mitglieder, nur Rang ohne weiteren Text
+            value_text = "‎"  # unsichtbares Leerzeichen
 
         embed.add_field(
             name=f"{emoji} | {name}",
-            value=mitglieder_text,
+            value=value_text,
             inline=False
         )
 
     embed.set_footer(text=f"Stand: <t:{int(discord.utils.utcnow().timestamp())}:D>")
-
     return embed
 
 # =========================
-# Flask-Webserver (für uptime-kontrolle)
+# Starte Flask-Server (für Uptime-Tools)
 # =========================
-app = Flask('')
+app = Flask("")
 
-@app.route('/')
+@app.route("/")
 def home():
-    return "Server läuft!"
+    return "Bot läuft..."
 
 def run():
     app.run(host="0.0.0.0", port=8080)
 
-def keep_alive():
-    t = threading.Thread(target=run)
-    t.start()
+threading.Thread(target=run).start()
 
 # =========================
-# Bot starten
+# Token laden und Bot starten
 # =========================
-keep_alive()
-bot.run(os.environ['TOKEN'])
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Token in Umgebungsvariablen setzen!
+
+if __name__ == "__main__":
+    bot.run(TOKEN)
