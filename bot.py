@@ -69,33 +69,27 @@ async def on_ready():
 
 @bot.event
 async def on_member_update(before, after):
-    print("DEBUG: on_member_update triggered")
     before_roles = set(role.id for role in before.roles)
     after_roles = set(role.id for role in after.roles)
 
     if before_roles == after_roles:
-        print("DEBUG: Keine Rollenänderung")
         return  # keine Rollenänderung
 
     role_ids = RANGLISTE
     if not any((role_id in before_roles) != (role_id in after_roles) for role_id in role_ids):
-        print("DEBUG: Keine Änderung in Ranglisten-Rollen")
         return
 
     channel = after.guild.get_channel(POST_CHANNEL_ID)
     if channel:
         embed = build_ranking_embed(after.guild)
         await channel.send(embed=embed)
-        print("DEBUG: Rangliste gesendet")
-    else:
-        print("DEBUG: POST_CHANNEL_ID nicht gefunden")
 
 @bot.event
 async def on_member_join(member):
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
         embed = discord.Embed(
-            title=f"<@{member.id}>, willkommen auf **Blood Life Police Department** 👮",
+            title=f"<@{member.id}>, willkommen auf **Straze Police Department** 👮",
             description=(
                 "📚 **Schön, dass du da bist!**\n"
                 "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
@@ -292,14 +286,6 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
 
 # =========================
-# Neuer Slash-Befehl: /rangliste
-# =========================
-@tree.command(name="rangliste", description="Zeigt die Rangliste an")
-async def rangliste(interaction: discord.Interaction):
-    embed = build_ranking_embed(interaction.guild)
-    await interaction.response.send_message(embed=embed)
-
-# =========================
 # 🔄 Helper: Rangliste-Embed aktualisieren
 # =========================
 def build_ranking_embed(guild):
@@ -314,14 +300,18 @@ def build_ranking_embed(guild):
             count = len(role.members)
             embed.add_field(
                 name=f"• {role.name}",
-                value=f"Mitglieder: {count}\n",
+                value=f"Mitglieder: {count}\n",  # Abstand zwischen Feldern
                 inline=False
             )
-
-    # Thumbnail Bild oben rechts
     embed.set_thumbnail(url="https://static.wikia.nocookie.net/arab-fivem/images/8/8f/Los_Santos_Police_Department.png")
     embed.set_footer(text="Straze Police Department")
     return embed
+
+# Neuer Slash-Befehl /rangliste
+@tree.command(name="rangliste", description="Zeigt die Rangliste an.")
+async def rangliste(interaction: discord.Interaction):
+    embed = build_ranking_embed(interaction.guild)
+    await interaction.response.send_message(embed=embed)
 
 # =========================
 # 🔄 Flask Webserver (für Keep-Alive)
