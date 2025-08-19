@@ -334,34 +334,42 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
 # Hilfsfunktion: Embed bauen (mit gedrehter Reihenfolge)
 # =========================
 
+from datetime import datetime
+
 def build_police_ranking_embed(guild):
     embed = discord.Embed(
         title="📈 Unsere Police Officer",
-        description="Die Übersicht der aktuellen Mitglieder im LSPD",
+        description="Hier ist die aktuelle Übersicht des LSPD-Teams:\n\n",
         color=discord.Color.blue()
     )
+
     embed.set_thumbnail(url=LOGO_URL)
 
-    # Reihenfolge so, dass Chief of Police oben steht
-    for role_id in POLICE_ROLLEN_IDS:
+    # Wichtig: POLICE_ROLLEN_IDS umdrehen (Chief of Police oben)
+    for role_id in reversed(POLICE_ROLLEN_IDS):
         role = guild.get_role(role_id)
         if not role:
             continue
+
         members = role.members
         if len(members) == 0:
-            value = "_Keine Mitglieder_"
+            value = "_Keine Mitglieder_\n\u200b"  # \u200b für leere Zeile
         else:
-            value = "\n".join([f"• {member.display_name}" for member in members])
+            value = "\n".join([f"• {member.mention}" for member in members])
+            value += "\n\u200b"  # Leere Zeile am Ende
 
         embed.add_field(
-            name=f"{role.name} [{len(members)}]",
+            name=f"🪪 {role.name} [{len(members)}]",
             value=value,
             inline=False
         )
 
-    embed.set_footer(text="BloodLife Police Department")
-    return embed
+    # Footer mit Zeit
+    aktuelle_zeit = datetime.now().strftime("%d.%m.%Y – %H:%M Uhr")
+    embed.set_image(url=LOGO_URL)  # Wird automatisch skaliert
+    embed.set_footer(text=f"BloodLife Police Department | Aktualisiert: {aktuelle_zeit}")
 
+    return embed
 # =========================
 # Webserver (für Uptime / Keepalive)
 # =========================
