@@ -30,20 +30,15 @@ tree = bot.tree
 SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
-POST_CHANNEL_ID = 1396969114039226599
+POST_CHANNEL_ID = 1396969114039226599  # Hier der von dir genannte Post-Kanal
 LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
 
 # =========================
-# Rollen und Ränge
+# Rollen und Ränge (Police Officer Rollen)
 # =========================
 registrierte_user = {}
 
-ROLLEN_IDS = [
-    1396969113955602569,
-    1396969114022711376,
-]
-
-RANGLISTE = [
+POLICE_ROLLEN_IDS = [
     1396969114022711376,
     1396969114022711377,
     1396969114022711378,
@@ -57,6 +52,13 @@ RANGLISTE = [
     1396969114031095936,
     1396969114031095937,
 ]
+
+ROLLEN_IDS = [
+    1396969113955602569,
+    1396969114022711376,
+]
+
+RANGLISTE = POLICE_ROLLEN_IDS  # für andere Funktionen, falls benötigt
 
 BEFUGTE_RANG_IDS = [
     1396969114005930128,
@@ -93,23 +95,29 @@ async def on_member_update(before, after):
     if before_roles == after_roles:
         return  # keine Rollenänderung
 
-    # Nur reagieren, wenn Ranglisten-Rollen sich geändert haben
-    if not any((role_id in before_roles) != (role_id in after_roles) for role_id in RANGLISTE):
+    # Prüfen, ob sich Rollen aus der Police-Liste geändert haben
+    role_change = any(
+        (role_id in before_roles) != (role_id in after_roles)
+        for role_id in POLICE_ROLLEN_IDS
+    )
+    if not role_change:
         return
 
     channel = after.guild.get_channel(POST_CHANNEL_ID)
     if channel:
-        # Alte Ranglisten-Nachricht vom Bot suchen und löschen
+        # Alte Ranglisten-Nachricht löschen
         async for msg in channel.history(limit=50):
-            if msg.author == bot.user:
-                if msg.embeds and msg.embeds[0].title == "📈 Rangliste der Mitglieder":
+            if msg.author == bot.user and msg.embeds:
+                embed = msg.embeds[0]
+                if embed.title == "📈 Unsere Police Officer":
                     try:
                         await msg.delete()
                     except discord.Forbidden:
                         logging.warning("Keine Berechtigung, alte Nachricht zu löschen.")
-                    break  # nur eine löschen
+                    break
 
-        embed = build_ranking_embed(after.guild)
+        # Neue Rangliste senden
+        embed = build_police_ranking_embed(after.guild)
         await channel.send(embed=embed)
 
 @bot.event
@@ -270,25 +278,26 @@ async def uprank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("❌ Keine Berechtigung.", ephemeral=True)
         return
 
-    user_ränge = [r for r in [guild.get_role(rid) for rid in RANGLISTE] if r in user.roles]
+    user_ränge = [r for r in [guild.get_role(rid) for rid in POLICE_ROLLEN_IDS] if r in user.roles]
     if not user_ränge:
-        await interaction.response.send_message(f"{user.mention} hat keine Rangrolle.", ephemeral=True)
-        return
-    user_index = max(RANGLISTE.index(r.id) for r in user_ränge)
-
-    if user_index >= len(RANGLISTE) - 1:
-        await interaction.response.send_message("✅ Nutzer hat bereits höchsten Rang.", ephemeral=True)
+        await interaction.response.send_message("⚠️ Der Nutzer hat keine der Police Rollen.", ephemeral=True)
         return
 
-    neue_rolle = guild.get_role(RANGLISTE[user_index + 1])
-    alte_rolle = guild.get_role(RANGLISTE[user_index])
+    aktuelle_rolle = user_ränge[0]
+    index = POLICE_ROLLEN_IDS.index(aktuelle_rolle.id)
+    if index == len(POLICE_ROLLEN_IDS) - 1:
+        await interaction.response.send_message("⚠️ Der Nutzer ist bereits auf dem höchsten Rang.", ephemeral=True)
+        return
 
-    try:
-        await user.remove_roles(alte_rolle)
+    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index + 1])
+    if neue_rolle:
+        await user.remove_roles(aktuelle_rolle)
         await user.add_roles(neue_rolle)
-        await interaction.response.send_message(f"🔝 {user.mention} wurde befördert: {alte_rolle.name} → {neue_rolle.name}")
-    except discord.Forbidden:
-        await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
+        await interaction.response.send_message(
+            f"✅ {user.mention} wurde befördert von {aktuelle_rolle.name} zu {neue_rolle.name}."
+        )
+    else:
+        await interaction.response.send_message("⚠️ Neue Rolle nicht gefunden.", ephemeral=True)
 
 @tree.command(name="downrank", description="Degradiert einen User.")
 @app_commands.describe(user="User, der degradiert werden soll")
@@ -300,77 +309,82 @@ async def downrank(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("❌ Keine Berechtigung.", ephemeral=True)
         return
 
-    user_ränge = [r for r in [guild.get_role(rid) for rid in RANGLISTE] if r in user.roles]
+    user_ränge = [r for r in [guild.get_role(rid) for rid in POLICE_ROLLEN_IDS] if r in user.roles]
     if not user_ränge:
-        await interaction.response.send_message(f"{user.mention} hat keine Rangrolle.", ephemeral=True)
-        return
-    user_index = min(RANGLISTE.index(r.id) for r in user_ränge)
-
-    if user_index == 0:
-        await interaction.response.send_message("✅ Nutzer hat bereits niedrigsten Rang.", ephemeral=True)
+        await interaction.response.send_message("⚠️ Der Nutzer hat keine der Police Rollen.", ephemeral=True)
         return
 
-    neue_rolle = guild.get_role(RANGLISTE[user_index - 1])
-    alte_rolle = guild.get_role(RANGLISTE[user_index])
+    aktuelle_rolle = user_ränge[0]
+    index = POLICE_ROLLEN_IDS.index(aktuelle_rolle.id)
+    if index == 0:
+        await interaction.response.send_message("⚠️ Der Nutzer ist bereits auf dem niedrigsten Rang.", ephemeral=True)
+        return
 
-    try:
-        await user.remove_roles(alte_rolle)
+    neue_rolle = guild.get_role(POLICE_ROLLEN_IDS[index - 1])
+    if neue_rolle:
+        await user.remove_roles(aktuelle_rolle)
         await user.add_roles(neue_rolle)
-        await interaction.response.send_message(f"🔻 {user.mention} wurde degradiert: {alte_rolle.name} → {neue_rolle.name}")
-    except discord.Forbidden:
-        await interaction.response.send_message("❌ Keine Berechtigung zum Ändern der Rollen.", ephemeral=True)
+        await interaction.response.send_message(
+            f"✅ {user.mention} wurde degradiert von {aktuelle_rolle.name} zu {neue_rolle.name}."
+        )
+    else:
+        await interaction.response.send_message("⚠️ Neue Rolle nicht gefunden.", ephemeral=True)
 
 # =========================
-# 🔄 Helper: Rangliste-Embed aktualisieren
+# Hilfsfunktion: Embed bauen
 # =========================
 
-def build_ranking_embed(guild):
+def build_police_ranking_embed(guild):
     embed = discord.Embed(
-        title="📈 Rangliste der Mitglieder",
-        description="Aktuelle Verteilung der Ränge im LSPD",
+        title="📈 Unsere Police Officer",
+        description="Die Übersicht der aktuellen Mitglieder im LSPD",
         color=discord.Color.blue()
     )
-    for role_id in RANGLISTE:
-        role = guild.get_role(role_id)
-        if role:
-            count = len(role.members)
-            embed.add_field(
-                name=f"• {role.name}",
-                value=f"Mitglieder: {count}\n",
-                inline=False
-            )
+    embed.set_thumbnail(url=LOGO_URL)
 
-    embed.set_thumbnail(url="https://static.wikia.nocookie.net/arab-fivem/images/8/8f/Los_Santos_Police_Department.png")
-    embed.set_footer(text="Straze Police Department")
+    for role_id in POLICE_ROLLEN_IDS:
+        role = guild.get_role(role_id)
+        if not role:
+            continue
+        members = role.members
+        if len(members) == 0:
+            value = "_Keine Mitglieder_"
+        else:
+            value = "\n".join([f"• {member.display_name}" for member in members])
+
+        embed.add_field(
+            name=f"{role.name} [{len(members)}]",
+            value=value,
+            inline=False
+        )
+
+    embed.set_footer(text="BloodLife Police Department")
     return embed
 
 # =========================
-# 🔄 Flask Webserver (für Keep-Alive)
+# Webserver (für Uptime / Keepalive)
 # =========================
+app = Flask('')
 
-app = Flask("")
-
-@app.route("/")
+@app.route('/')
 def home():
-    return "Bot läuft..."
+    return "Bot ist online."
 
 def run():
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
-    thread = threading.Thread(target=run)
-    thread.start()
+    t = threading.Thread(target=run)
+    t.start()
 
 # =========================
-# 🚀 Start Bot
+# Start des Bots
 # =========================
 
-keep_alive()
-
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Bot Token in Umgebungsvariablen setzen
-
-if not TOKEN:
-    logging.error("❌ Kein Token in Umgebungsvariablen gefunden! Bitte setze DISCORD_BOT_TOKEN")
-    exit(1)
-
-bot.run(TOKEN)
+if __name__ == "__main__":
+    keep_alive()
+    TOKEN = os.getenv("DISCORD_TOKEN")
+    if not TOKEN:
+        logging.error("❌ Kein Bot-Token in den Umgebungsvariablen gefunden!")
+        exit(1)
+    bot.run(TOKEN)
