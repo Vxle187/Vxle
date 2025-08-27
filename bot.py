@@ -1,5 +1,5 @@
 # ----------------------------------
-# LSPD Discord Bot (überarbeitet)
+# LSPD Discord Bot (überarbeitet + komplettes Ticketsystem)
 # ----------------------------------
 
 import discord
@@ -9,6 +9,8 @@ import os
 from flask import Flask
 import threading
 import logging
+from datetime import datetime
+from discord.ui import View
 
 # Logging aktivieren (für bessere Fehlersuche)
 logging.basicConfig(level=logging.INFO)
@@ -25,20 +27,26 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
 # =========================
-# Server und Kanal-IDs
+# Server und Kanal-IDs (deine Werte)
 # =========================
 SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
-POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal
+POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal (Ranking)
 LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
+
+# Ticket Ziel-Kanäle (wo die fertigen Tickets/Transcripts landen)
+BEWERBUNGEN_CHANNEL_ID = 1410111339359113318
+BESCHWERDEN_CHANNEL_ID = 1410111382237483088
+LEITUNG_CHANNEL_ID = 1410111463783268382
+
+# Kanal in dem das Ticket-Panel automatisch gepostet werden soll
+TICKET_PANEL_CHANNEL_ID = 1396969114442006539
 
 # =========================
 # Rollen und Ränge (Police Officer Rollen)
 # =========================
 registrierte_user = {}
-
-# Alte Reihenfolge (von niedrigstem zu höchstem Rang)
 
 POLICE_ROLLEN_IDS = [
     1396969114022711376,  # Rekrut
@@ -50,15 +58,13 @@ POLICE_ROLLEN_IDS = [
     1396969114031095931,  # Captain
     1396969114031095932,  # Major
     1396969114031095933,  # Commander
-    1396969114031095935,  # Deputy Chief (prüfe die ID hier, evtl. Fehler)
-    1396969114031095936,  # Assistant Chief (prüfe die ID hier, evtl. Fehler)
-    1396969114031095937,  # Chief of Police (prüfe die ID hier, evtl. Fehler)
+    1396969114031095935,  # Deputy Chief
+    1396969114031095936,  # Assistant Chief
+    1396969114031095937,  # Chief of Police
 ]
 
 # Neue Reihenfolge (höchster Rang zuerst)
 POLICE_ROLLEN_IDS = list(reversed(POLICE_ROLLEN_IDS))
-
-
 
 ROLLEN_IDS = [
     1396969113955602569,
@@ -77,7 +83,125 @@ BEFUGTE_RANG_IDS = [
 ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
 
 # =========================
-# 📡 EVENTS
+# 🎟️ Ticket-System: Fragen & Speicher
+# =========================
+ticket_categories = {
+    "bewerbung": [
+        "Wie lautet dein vollständiger Name?",
+        "Wie alt bist du?",
+        "Warum möchtest du Teil unseres Teams werden?",
+        "Welche Erfahrungen bringst du mit?"
+    ],
+    "beschwerde": [
+        "Wen betrifft die Beschwerde?",
+        "Bitte beschreibe die Situation so detailliert wie möglich.",
+        "Hast du Beweise (Screenshots, Chatlogs etc.)?"
+    ],
+    "leitung": [
+        "Welches Anliegen möchtest du der Leitung mitteilen?",
+        "Wie dringend ist dein Anliegen (1-10)?",
+        "Möchtest du anonym bleiben? (Ja/Nein)"
+    ]
+}
+
+# Mapping Ticket-Art -> Ziel-Channel-ID für Transcripts
+TICKET_TARGET_CHANNEL = {
+    "bewerbung": BEWERBUNGEN_CHANNEL_ID,
+    "beschwerde": BESCHWERDEN_CHANNEL_ID,
+    "leitung": LEITUNG_CHANNEL_ID
+}
+
+# Laufende Tickets:
+# key = owner_user_id -> value = {
+#   'channel_id': int,
+#   'art': 'bewerbung'|'beschwerde'|'leitung',
+#   'fragen': [...remaining...],
+#   'antworten': [...],
+#   'completed': bool
+# }
+user_tickets = {}
+
+# =========================
+# Ticket-Panel View (Buttons)
+# =========================
+class TicketPanel(View):
+    def __init__(self):
+        super().__init__(timeout=None)  # persistente View
+
+    async def _create_ticket_channel(self, interaction: discord.Interaction, art: str):
+        """Hilfsfunktion: Ticket-Channel erstellen und Ticket-Daten anlegen."""
+        guild = interaction.guild
+        owner = interaction.user
+
+        # Prüfen, ob User schon ein offenes Ticket hat
+        if owner.id in user_tickets:
+            await interaction.response.send_message("⚠️ Du hast bereits ein offenes Ticket. Bitte warte, bis dieses abgeschlossen ist.", ephemeral=True)
+            return None
+
+        # Berechtigungen / Overwrites
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            owner: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+            guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+        }
+
+        # Leitung / Admin Rollen Leserechte geben
+        for role_id in BEFUGTE_RANG_IDS:
+            role = guild.get_role(role_id)
+            if role:
+                overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+
+        # Channel-Name sauber generieren
+        safe_name = str(owner.display_name).lower().replace(" ", "-")[:80]
+        channel_name = f"ticket-{safe_name}"
+
+        ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+
+        # Ticket-Daten anlegen (nicht löschen, erst beim /ticketclose)
+        user_tickets[owner.id] = {
+            "channel_id": ticket_channel.id,
+            "art": art,
+            "fragen": list(ticket_categories[art]),
+            "antworten": [],
+            "completed": False,
+            "owner_id": owner.id,
+            "created_at": datetime.utcnow().isoformat()
+        }
+
+        return ticket_channel
+
+    @discord.ui.button(label="📄 Bewerbung", style=discord.ButtonStyle.primary, custom_id="ticket_bewerbung")
+    async def bewerbung_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ticket_channel = await self._create_ticket_channel(interaction, "bewerbung")
+        if not ticket_channel:
+            return
+        await interaction.response.send_message(f"✅ Dein Bewerbungs-Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
+        frage = user_tickets[interaction.user.id]["fragen"].pop(0)
+        await ticket_channel.send(f"🎟️ Hallo {interaction.user.mention}, willkommen in deinem **Bewerbungs-Ticket**.\nBitte beantworte die folgenden Fragen:")
+        await ticket_channel.send(f"❓ {frage}")
+
+    @discord.ui.button(label="⚠️ Beschwerde", style=discord.ButtonStyle.danger, custom_id="ticket_beschwerde")
+    async def beschwerde_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ticket_channel = await self._create_ticket_channel(interaction, "beschwerde")
+        if not ticket_channel:
+            return
+        await interaction.response.send_message(f"✅ Dein Beschwerde-Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
+        frage = user_tickets[interaction.user.id]["fragen"].pop(0)
+        await ticket_channel.send(f"🎟️ Hallo {interaction.user.mention}, willkommen in deinem **Beschwerde-Ticket**.\nBitte beantworte die folgenden Fragen:")
+        await ticket_channel.send(f"❓ {frage}")
+
+    @discord.ui.button(label="📢 Leitungsanliegen", style=discord.ButtonStyle.secondary, custom_id="ticket_leitung")
+    async def leitung_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ticket_channel = await self._create_ticket_channel(interaction, "leitung")
+        if not ticket_channel:
+            return
+        await interaction.response.send_message(f"✅ Dein Leitungs-Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
+        frage = user_tickets[interaction.user.id]["fragen"].pop(0)
+        await ticket_channel.send(f"🎟️ Hallo {interaction.user.mention}, willkommen in deinem **Leitungs-Ticket**.\nBitte beantworte die folgenden Fragen:")
+        await ticket_channel.send(f"❓ {frage}")
+
+# =========================
+# 📡 EVENTS (on_ready, on_member_update, join/leave, on_message erweitert)
 # =========================
 
 @bot.event
@@ -87,12 +211,40 @@ async def on_ready():
         logging.info(f"✅ Verbunden mit Server ID {SERVER_ID}.")
     else:
         logging.warning(f"❌ Server ID {SERVER_ID} nicht gefunden!")
-    
+
     # Slash-Befehle synchronisieren
     await tree.sync()
     logging.info(f"✅ Bot ist online als {bot.user}")
     logging.info("🔍 Geladene Textbefehle: %s", [cmd.name for cmd in bot.commands])
     logging.info("🔧 Slash-Befehle synchronisiert.")
+
+    # Persistent View registrieren (damit Buttons nach Neustart funktionieren)
+    bot.add_view(TicketPanel())
+
+    # Ticket Panel automatisch posten in dem gewünschten Kanal (einmalig, vermeidet Doppelposts)
+    guild = bot.get_guild(SERVER_ID)
+    if guild:
+        panel_channel = guild.get_channel(TICKET_PANEL_CHANNEL_ID)
+        if panel_channel:
+            should_post = True
+            async for msg in panel_channel.history(limit=20):
+                if msg.author == bot.user and msg.embeds:
+                    emb = msg.embeds[0]
+                    if emb.title == "🎫 Ticket-System":
+                        should_post = False
+                        break
+            if should_post:
+                embed = discord.Embed(
+                    title="🎫 Ticket-System",
+                    description="Klicke unten auf die passende Schaltfläche, um ein Ticket zu öffnen:\n\n"
+                                "📄 Bewerbung → Bewerbungen\n"
+                                "⚠️ Beschwerde → Beschwerden\n"
+                                "📢 Leitungsanliegen → Direkt zur Leitung",
+                    color=discord.Color.blue()
+                )
+                view = TicketPanel()
+                await panel_channel.send(embed=embed, view=view)
+                logging.info("📌 Ticket-Panel im Kanal gepostet.")
 
 @bot.event
 async def on_member_update(before, after):
@@ -192,9 +344,49 @@ async def on_member_remove(member):
 async def on_message(message):
     EINSTELLUNGSKANAL_ID = 1396969115813544127  # Der Kanal, in dem /einstellen verwendet wird
 
-    if message.author == bot.user:
+    # Ignoriere Bots
+    if message.author.bot:
         return
 
+    # -------------------------
+    # Ticket-Antworten verarbeiten
+    # -------------------------
+    # Wenn der Autor ein Ticket besitzt und im zugehörigen Ticket-Channel schreibt,
+    # werden die Antworten gespeichert und bei Abschluss in den Ziel-Channel gesendet.
+    owner_id = message.author.id
+    if owner_id in user_tickets:
+        ticket = user_tickets[owner_id]
+        if message.channel.id == ticket["channel_id"]:
+            # Nur die Antworten des Ticket-Owners zählen als Antworten (Staff kann normal chatten)
+            ticket["antworten"].append(message.content)
+
+            if ticket["fragen"]:
+                # nächste Frage
+                frage = ticket["fragen"].pop(0)
+                await message.channel.send(f"❓ {frage}")
+            else:
+                # Alle Fragen beantwortet -> Ticket ist "abgeschlossen" (await staff close)
+                ticket["completed"] = True
+                await message.channel.send("✅ Vielen Dank! Deine Antworten wurden gespeichert. Ein Teammitglied wird sich melden. Du kannst das Ticket schließen lassen, wenn alles geklärt ist.")
+
+                # Sofortes Senden einer Kopie / Übersicht an den zuständigen Ziel-Channel
+                ziel_channel_id = TICKET_TARGET_CHANNEL.get(ticket["art"])
+                if ziel_channel_id:
+                    ziel_channel = message.guild.get_channel(ziel_channel_id)
+                    if ziel_channel:
+                        antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket['antworten'])]) or "_Keine Antworten gefunden_"
+                        embed = discord.Embed(
+                            title=f"📩 Neues {ticket['art'].capitalize()}-Ticket (eingereicht)",
+                            description=f"Von: {message.author.mention}\nChannel: <#{ticket['channel_id']}>",
+                            color=discord.Color.blue()
+                        )
+                        embed.add_field(name="Antworten", value=antworten_text, inline=False)
+                        embed.set_footer(text=f"Erstellt: {ticket.get('created_at')}")
+                        await ziel_channel.send(embed=embed)
+
+    # -------------------------
+    # Originale on_message-Logik (EINSTELLUNGSKANAL_ID & Commands)
+    # -------------------------
     if message.channel.id == EINSTELLUNGSKANAL_ID:
         try:
             channel = message.guild.get_channel(POST_CHANNEL_ID)
@@ -217,6 +409,7 @@ async def on_message(message):
 
     # Damit Slash- und Prefix-Befehle weiterhin funktionieren
     await bot.process_commands(message)
+
 # =========================
 # 🧹 Text-Befehle: !loeschen und !löschen
 # =========================
@@ -245,7 +438,7 @@ async def nachrichten_loeschen(ctx, anzahl: int):
     await ctx.send(f"🧹 {anzahl} Nachrichten gelöscht.", delete_after=5)
 
 # =========================
-# ✅ Slash-Befehle
+# ✅ Slash-Befehle (einstellen/profil/entlassen/uprank/downrank/dienstnummern)
 # =========================
 
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
@@ -391,11 +584,59 @@ async def dienstnummern(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 # =========================
+# Slash-Befehl: Ticket schließen (nur für Leitung/Admins)
+# =========================
+@tree.command(name="ticketclose", description="Schließt das aktuelle Ticket (nur Leitung/Admins).")
+async def ticketclose(interaction: discord.Interaction):
+    # Rechte prüfen
+    if not any(role.id in BEFUGTE_RANG_IDS for role in interaction.user.roles):
+        await interaction.response.send_message("❌ Du hast keine Berechtigung, Tickets zu schließen.", ephemeral=True)
+        return
+
+    channel = interaction.channel
+    # Finde Ticket-Eintrag (falls vorhanden)
+    ticket_owner_id = None
+    for uid, data in user_tickets.items():
+        if data.get("channel_id") == channel.id:
+            ticket_owner_id = uid
+            ticket_data = data
+            break
+    else:
+        ticket_owner_id = None
+        ticket_data = None
+
+    # Wenn es ein Ticket-Channel ist: optionale Transkript-Sendung und Löschung
+    if channel.name.startswith("ticket-"):
+        # Wenn Ticket-Daten vorhanden -> sende Transkript an Ziel-Channel
+        if ticket_data:
+            ziel_channel_id = TICKET_TARGET_CHANNEL.get(ticket_data["art"])
+            if ziel_channel_id:
+                ziel_channel = interaction.guild.get_channel(ziel_channel_id)
+                if ziel_channel:
+                    antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket_data.get('antworten', []))]) or "_Keine Antworten_"
+                    embed = discord.Embed(
+                        title=f"🗂 Ticket-Transkript: {ticket_data['art'].capitalize()}",
+                        description=f"Von: <@{ticket_owner_id}> (geschlossen von {interaction.user.mention})",
+                        color=discord.Color.orange()
+                    )
+                    embed.add_field(name="Antworten", value=antworten_text, inline=False)
+                    embed.set_footer(text=f"Erstellt: {ticket_data.get('created_at')}")
+                    await ziel_channel.send(embed=embed)
+
+            # Ticket aus Speicher entfernen
+            try:
+                del user_tickets[ticket_owner_id]
+            except KeyError:
+                pass
+
+        await interaction.response.send_message("✅ Ticket wird geschlossen und gelöscht.", ephemeral=True)
+        await channel.delete()
+    else:
+        await interaction.response.send_message("❌ Dies ist kein Ticket-Channel.", ephemeral=True)
+
+# =========================
 # Hilfsfunktion: Embed bauen (mit gedrehter Reihenfolge)
 # =========================
-
-from datetime import datetime
-
 def build_police_ranking_embed(guild):
     embed = discord.Embed(
         title="📈 Unsere Police Officer",
@@ -451,12 +692,10 @@ def keep_alive():
 # =========================
 # Start des Bots
 # =========================
-
 keep_alive()
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 if not TOKEN:
-    logging.error("❌ Kein Bot-Token in den Umgebungsvariablen gefunden!")
-    exit(1)
-
-bot.run(TOKEN)
+    logging.error("❌ Kein Bot-Token gefunden. Bitte setze die ENV Variable DISCORD_BOT_TOKEN.")
+else:
+    bot.run(TOKEN)
