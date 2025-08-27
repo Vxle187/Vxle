@@ -458,7 +458,31 @@ async def nachrichten_loeschen(ctx, anzahl: int):
 
     await ctx.channel.purge(limit=anzahl + 1)
     await ctx.send(f"🧹 {anzahl} Nachrichten gelöscht.", delete_after=5)
+    
+# --------------------------
+# Slash-Befehl: Ticket-Panel manuell posten
+# --------------------------
+@tree.command(name="tickets", description="Postet das Ticket-Panel in den vorgesehenen Kanal.")
+async def tickets(interaction: discord.Interaction):
+    channel = interaction.guild.get_channel(TICKET_PANEL_CHANNEL_ID)
+    if not channel:
+        await interaction.response.send_message("❌ Ticket-Panel-Kanal wurde nicht gefunden.", ephemeral=True)
+        return
 
+    embed = discord.Embed(
+        title="🎫 Ticket-System",
+        description=(
+            "Klicke unten auf die passende Schaltfläche, um ein Ticket zu öffnen:\n\n"
+            "📄 **Bewerbung** → Bewerbungen\n"
+            "⚠️ **Beschwerde** → Beschwerden\n"
+            "📢 **Leitungsanliegen** → Direkt zur Leitung"
+        ),
+        color=discord.Color.blue()
+    )
+    view = TicketPanel()
+    await channel.send(embed=embed, view=view)
+    await interaction.response.send_message("✅ Ticket-Panel wurde gepostet.", ephemeral=True)
+    
 # =========================
 # ✅ Slash-Befehle (einstellen/profil/entlassen/uprank/downrank/dienstnummern)
 # =========================
