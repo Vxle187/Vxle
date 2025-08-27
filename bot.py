@@ -1,5 +1,5 @@
 # ----------------------------------
-# LSPD Discord Bot (überarbeitet + komplettes Ticketsystem)
+# LSPD Discord Bot (überarbeitet + komplettes Ticketsystem mit Kategorien)
 # ----------------------------------
 
 import discord
@@ -10,7 +10,7 @@ from flask import Flask
 import threading
 import logging
 from datetime import datetime
-from discord.ui import View
+from discord.ui import View, Select
 
 # Logging aktivieren (für bessere Fehlersuche)
 logging.basicConfig(level=logging.INFO)
@@ -32,13 +32,14 @@ tree = bot.tree
 SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
-POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal (Ranking)
+POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal (Ranking / Fallback für Transkripte)
 LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
 
-# Ticket Ziel-Kanäle (wo die fertigen Tickets/Transcripts landen)
-BEWERBUNGEN_CHANNEL_ID = 1410111339359113318
-BESCHWERDEN_CHANNEL_ID = 1410111382237483088
-LEITUNG_CHANNEL_ID = 1410111463783268382
+# **WICHTIG**: Diese IDs sind KATEGORIEN (Discord Category IDs).
+# Beim Erstellen eines Tickets wird ein neuer Text-Channel **in dieser Kategorie** angelegt.
+BEWERBUNGEN_CATEGORY_ID = 1410111339359113318
+BESCHWERDEN_CATEGORY_ID = 1410111382237483088
+LEITUNG_CATEGORY_ID = 1410111463783268382
 
 # Kanal in dem das Ticket-Panel automatisch gepostet werden soll
 TICKET_PANEL_CHANNEL_ID = 1396969114442006539
@@ -104,11 +105,11 @@ ticket_categories = {
     ]
 }
 
-# Mapping Ticket-Art -> Ziel-Channel-ID für Transcripts
-TICKET_TARGET_CHANNEL = {
-    "bewerbung": BEWERBUNGEN_CHANNEL_ID,
-    "beschwerde": BESCHWERDEN_CHANNEL_ID,
-    "leitung": LEITUNG_CHANNEL_ID
+# Mapping Ticket-Art -> Kategorie-ID (nicht Kanal!)
+TICKET_CATEGORY_IDS = {
+    "bewerbung": BEWERBUNGEN_CATEGORY_ID,
+    "beschwerde": BESCHWERDEN_CATEGORY_ID,
+    "leitung": LEITUNG_CATEGORY_ID
 }
 
 # Laufende Tickets:
@@ -122,21 +123,54 @@ TICKET_TARGET_CHANNEL = {
 user_tickets = {}
 
 # =========================
-# Ticket-Panel View (Buttons)
+# Hilfsfunktion: Bestimme Ziel-Textkanal für ein Kategorie-Ziel
+# - Wenn target_id eine Category ist, suche den ersten Text-Channel darin (oder benannten Channel)
+# - Fallback: POST_CHANNEL_ID (falls nichts passendes gefunden)
 # =========================
-class TicketPanel(View):
-    def __init__(self):
-        super().__init__(timeout=None)  # persistente View
+def resolve_target_text_channel(guild: discord.Guild, target_id: int) -> discord.TextChannel | None:
+    if not guild:
+        return None
+    target = guild.get_channel(target_id)
+    # Falls die ID bereits ein TextChannel ist (unwahrscheinlich, aber sicherheitshalber)
+    if isinstance(target, discord.TextChannel):
+        return target
+    # Falls die ID eine Category ist, suche darin nach einem geeigneten Text-Channel
+    if isinstance(target, discord.CategoryChannel):
+        # Priorisiere z.B. einen Channel mit 'team' oder 'logs' im Namen (optional)
+        for ch in target.channels:
+            if isinstance(ch, discord.TextChannel) and ('team' in ch.name or 'log' in ch.name or 'ticket' in ch.name):
+                return ch
+        # Falls nichts gefunden, gib den ersten Text-Channel in der Kategorie zurück
+        for ch in target.channels:
+            if isinstance(ch, discord.TextChannel):
+                return ch
+    # Fallback: POST_CHANNEL_ID (z. B. dein Ranking- oder Log-Kanal)
+    fallback = guild.get_channel(POST_CHANNEL_ID)
+    if isinstance(fallback, discord.TextChannel):
+        return fallback
+    return None
 
-    async def _create_ticket_channel(self, interaction: discord.Interaction, art: str):
-        """Hilfsfunktion: Ticket-Channel erstellen und Ticket-Daten anlegen."""
+# =========================
+# Dropdown-Ticket-Panel (erstellt neuen Text-Channel IN der entsprechenden Kategorie)
+# =========================
+class TicketSelect(Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="📄 Bewerbung", value="bewerbung", description="Starte deine Bewerbung"),
+            discord.SelectOption(label="⚠️ Beschwerde", value="beschwerde", description="Reiche eine Beschwerde ein"),
+            discord.SelectOption(label="📢 Leitungsanliegen", value="leitung", description="Kontaktiere die Leitung")
+        ]
+        super().__init__(placeholder="Bitte wähle einen Grund", min_values=1, max_values=1, options=options, custom_id="ticket_dropdown")
+
+    async def callback(self, interaction: discord.Interaction):
+        art = self.values[0]
         guild = interaction.guild
         owner = interaction.user
 
-        # Prüfen, ob User schon ein offenes Ticket hat
+        # bereits offenes Ticket?
         if owner.id in user_tickets:
-            await interaction.response.send_message("⚠️ Du hast bereits ein offenes Ticket. Bitte warte, bis dieses abgeschlossen ist.", ephemeral=True)
-            return None
+            await interaction.response.send_message("⚠️ Du hast bereits ein offenes Ticket. Bitte schließe dieses zuerst oder warte, bis es bearbeitet ist.", ephemeral=True)
+            return
 
         # Berechtigungen / Overwrites
         overwrites = {
@@ -145,7 +179,7 @@ class TicketPanel(View):
             guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)
         }
 
-        # Leitung / Admin Rollen Leserechte geben
+        # Leitung/Admin Rollen Leserechte geben
         for role_id in BEFUGTE_RANG_IDS:
             role = guild.get_role(role_id)
             if role:
@@ -155,9 +189,18 @@ class TicketPanel(View):
         safe_name = str(owner.display_name).lower().replace(" ", "-")[:80]
         channel_name = f"ticket-{safe_name}"
 
-        ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+        # Kategorie finden (kann None sein -> Kanal oben in Server root erstellen)
+        category_id = TICKET_CATEGORY_IDS.get(art)
+        category = guild.get_channel(category_id) if category_id else None
 
-        # Ticket-Daten anlegen (nicht löschen, erst beim /ticketclose)
+        # Kanal in Kategorie erstellen (wenn vorhanden)
+        if isinstance(category, discord.CategoryChannel):
+            ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites, category=category)
+        else:
+            # Falls Kategorie nicht gefunden, erstelle einfach normalen Kanal
+            ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+
+        # Ticket-Daten anlegen
         user_tickets[owner.id] = {
             "channel_id": ticket_channel.id,
             "art": art,
@@ -168,37 +211,16 @@ class TicketPanel(View):
             "created_at": datetime.utcnow().isoformat()
         }
 
-        return ticket_channel
-
-    @discord.ui.button(label="📄 Bewerbung", style=discord.ButtonStyle.primary, custom_id="ticket_bewerbung")
-    async def bewerbung_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        ticket_channel = await self._create_ticket_channel(interaction, "bewerbung")
-        if not ticket_channel:
-            return
-        await interaction.response.send_message(f"✅ Dein Bewerbungs-Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
-        frage = user_tickets[interaction.user.id]["fragen"].pop(0)
-        await ticket_channel.send(f"🎟️ Hallo {interaction.user.mention}, willkommen in deinem **Bewerbungs-Ticket**.\nBitte beantworte die folgenden Fragen:")
+        # Rückmeldung an User und erste Frage schicken
+        await interaction.response.send_message(f"✅ Dein {art}-Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
+        frage = user_tickets[owner.id]["fragen"].pop(0)
+        await ticket_channel.send(f"🎟️ Hallo {owner.mention}, willkommen in deinem **{art.capitalize()}-Ticket**.\nBitte beantworte die folgenden Fragen:")
         await ticket_channel.send(f"❓ {frage}")
 
-    @discord.ui.button(label="⚠️ Beschwerde", style=discord.ButtonStyle.danger, custom_id="ticket_beschwerde")
-    async def beschwerde_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        ticket_channel = await self._create_ticket_channel(interaction, "beschwerde")
-        if not ticket_channel:
-            return
-        await interaction.response.send_message(f"✅ Dein Beschwerde-Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
-        frage = user_tickets[interaction.user.id]["fragen"].pop(0)
-        await ticket_channel.send(f"🎟️ Hallo {interaction.user.mention}, willkommen in deinem **Beschwerde-Ticket**.\nBitte beantworte die folgenden Fragen:")
-        await ticket_channel.send(f"❓ {frage}")
-
-    @discord.ui.button(label="📢 Leitungsanliegen", style=discord.ButtonStyle.secondary, custom_id="ticket_leitung")
-    async def leitung_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        ticket_channel = await self._create_ticket_channel(interaction, "leitung")
-        if not ticket_channel:
-            return
-        await interaction.response.send_message(f"✅ Dein Leitungs-Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
-        frage = user_tickets[interaction.user.id]["fragen"].pop(0)
-        await ticket_channel.send(f"🎟️ Hallo {interaction.user.mention}, willkommen in deinem **Leitungs-Ticket**.\nBitte beantworte die folgenden Fragen:")
-        await ticket_channel.send(f"❓ {frage}")
+class TicketDropdown(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(TicketSelect())
 
 # =========================
 # 📡 EVENTS (on_ready, on_member_update, join/leave, on_message erweitert)
@@ -218,8 +240,8 @@ async def on_ready():
     logging.info("🔍 Geladene Textbefehle: %s", [cmd.name for cmd in bot.commands])
     logging.info("🔧 Slash-Befehle synchronisiert.")
 
-    # Persistent View registrieren (damit Buttons nach Neustart funktionieren)
-    bot.add_view(TicketPanel())
+    # Persistent View registrieren (damit Dropdown nach Neustart funktioniert)
+    bot.add_view(TicketDropdown())
 
     # Ticket Panel automatisch posten in dem gewünschten Kanal (einmalig, vermeidet Doppelposts)
     guild = bot.get_guild(SERVER_ID)
@@ -236,13 +258,12 @@ async def on_ready():
             if should_post:
                 embed = discord.Embed(
                     title="🎫 Ticket-System",
-                    description="Klicke unten auf die passende Schaltfläche, um ein Ticket zu öffnen:\n\n"
-                                "📄 Bewerbung → Bewerbungen\n"
-                                "⚠️ Beschwerde → Beschwerden\n"
-                                "📢 Leitungsanliegen → Direkt zur Leitung",
-                    color=discord.Color.blue()
+                    description="Willkommen im Ticketsystem! Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
+                                "**Wichtig:**\nBitte beschreibe dein Anliegen so genau wie möglich.",
+                    color=discord.Color.red()
                 )
-                view = TicketPanel()
+                embed.set_image(url=LOGO_URL)
+                view = TicketDropdown()
                 await panel_channel.send(embed=embed, view=view)
                 logging.info("📌 Ticket-Panel im Kanal gepostet.")
 
@@ -340,6 +361,9 @@ async def on_member_remove(member):
     embed.set_footer(text="Auf Wiedersehen.")
     await channel.send(embed=embed)
 
+# -------------------------
+# Ticket-Antworten verarbeiten (nur EIN on_message vorhanden)
+# -------------------------
 @bot.event
 async def on_message(message):
     EINSTELLUNGSKANAL_ID = 1396969115813544127  # Der Kanal, in dem /einstellen verwendet wird
@@ -351,13 +375,12 @@ async def on_message(message):
     # -------------------------
     # Ticket-Antworten verarbeiten
     # -------------------------
-    # Wenn der Autor ein Ticket besitzt und im zugehörigen Ticket-Channel schreibt,
-    # werden die Antworten gespeichert und bei Abschluss in den Ziel-Channel gesendet.
     owner_id = message.author.id
     if owner_id in user_tickets:
         ticket = user_tickets[owner_id]
+        # Wenn der User im zugehörigen Ticket-Channel schreibt
         if message.channel.id == ticket["channel_id"]:
-            # Nur die Antworten des Ticket-Owners zählen als Antworten (Staff kann normal chatten)
+            # Antworten speichern (nur vom Ticket-Owner)
             ticket["antworten"].append(message.content)
 
             if ticket["fragen"]:
@@ -365,24 +388,23 @@ async def on_message(message):
                 frage = ticket["fragen"].pop(0)
                 await message.channel.send(f"❓ {frage}")
             else:
-                # Alle Fragen beantwortet -> Ticket ist "abgeschlossen" (await staff close)
+                # Alle Fragen beantwortet -> Ticket ist "abgeschlossen"
                 ticket["completed"] = True
                 await message.channel.send("✅ Vielen Dank! Deine Antworten wurden gespeichert. Ein Teammitglied wird sich melden. Du kannst das Ticket schließen lassen, wenn alles geklärt ist.")
 
-                # Sofortes Senden einer Kopie / Übersicht an den zuständigen Ziel-Channel
-                ziel_channel_id = TICKET_TARGET_CHANNEL.get(ticket["art"])
-                if ziel_channel_id:
-                    ziel_channel = message.guild.get_channel(ziel_channel_id)
-                    if ziel_channel:
-                        antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket['antworten'])]) or "_Keine Antworten gefunden_"
-                        embed = discord.Embed(
-                            title=f"📩 Neues {ticket['art'].capitalize()}-Ticket (eingereicht)",
-                            description=f"Von: {message.author.mention}\nChannel: <#{ticket['channel_id']}>",
-                            color=discord.Color.blue()
-                        )
-                        embed.add_field(name="Antworten", value=antworten_text, inline=False)
-                        embed.set_footer(text=f"Erstellt: {ticket.get('created_at')}")
-                        await ziel_channel.send(embed=embed)
+                # Sofortiges Senden einer Übersicht an den zuständigen Ziel-Text-Channel
+                category_id = TICKET_CATEGORY_IDS.get(ticket["art"])
+                ziel_channel = resolve_target_text_channel(message.guild, category_id)
+                if ziel_channel:
+                    antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket['antworten'])]) or "_Keine Antworten gefunden_"
+                    embed = discord.Embed(
+                        title=f"📩 Neues {ticket['art'].capitalize()}-Ticket (eingereicht)",
+                        description=f"Von: {message.author.mention}\nChannel: <#{ticket['channel_id']}>",
+                        color=discord.Color.blue()
+                    )
+                    embed.add_field(name="Antworten", value=antworten_text, inline=False)
+                    embed.set_footer(text=f"Erstellt: {ticket.get('created_at')}")
+                    await ziel_channel.send(embed=embed)
 
     # -------------------------
     # Originale on_message-Logik (EINSTELLUNGSKANAL_ID & Commands)
@@ -596,32 +618,29 @@ async def ticketclose(interaction: discord.Interaction):
     channel = interaction.channel
     # Finde Ticket-Eintrag (falls vorhanden)
     ticket_owner_id = None
+    ticket_data = None
     for uid, data in user_tickets.items():
         if data.get("channel_id") == channel.id:
             ticket_owner_id = uid
             ticket_data = data
             break
-    else:
-        ticket_owner_id = None
-        ticket_data = None
 
     # Wenn es ein Ticket-Channel ist: optionale Transkript-Sendung und Löschung
-    if channel.name.startswith("ticket-"):
+    if channel and channel.name.startswith("ticket-"):
         # Wenn Ticket-Daten vorhanden -> sende Transkript an Ziel-Channel
         if ticket_data:
-            ziel_channel_id = TICKET_TARGET_CHANNEL.get(ticket_data["art"])
-            if ziel_channel_id:
-                ziel_channel = interaction.guild.get_channel(ziel_channel_id)
-                if ziel_channel:
-                    antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket_data.get('antworten', []))]) or "_Keine Antworten_"
-                    embed = discord.Embed(
-                        title=f"🗂 Ticket-Transkript: {ticket_data['art'].capitalize()}",
-                        description=f"Von: <@{ticket_owner_id}> (geschlossen von {interaction.user.mention})",
-                        color=discord.Color.orange()
-                    )
-                    embed.add_field(name="Antworten", value=antworten_text, inline=False)
-                    embed.set_footer(text=f"Erstellt: {ticket_data.get('created_at')}")
-                    await ziel_channel.send(embed=embed)
+            category_id = TICKET_CATEGORY_IDS.get(ticket_data["art"])
+            ziel_channel = resolve_target_text_channel(interaction.guild, category_id)
+            if ziel_channel:
+                antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket_data.get('antworten', []))]) or "_Keine Antworten_"
+                embed = discord.Embed(
+                    title=f"🗂 Ticket-Transkript: {ticket_data['art'].capitalize()}",
+                    description=f"Von: <@{ticket_owner_id}> (geschlossen von {interaction.user.mention})",
+                    color=discord.Color.orange()
+                )
+                embed.add_field(name="Antworten", value=antworten_text, inline=False)
+                embed.set_footer(text=f"Erstellt: {ticket_data.get('created_at')}")
+                await ziel_channel.send(embed=embed)
 
             # Ticket aus Speicher entfernen
             try:
