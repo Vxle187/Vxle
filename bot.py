@@ -458,7 +458,26 @@ async def nachrichten_loeschen(ctx, anzahl: int):
 
     await ctx.channel.purge(limit=anzahl + 1)
     await ctx.send(f"🧹 {anzahl} Nachrichten gelöscht.", delete_after=5)
-    
+
+# --------------------------
+# Slash-Befehl: Rolle vergeben
+# --------------------------
+@tree.command(name="rolle", description="Vergibt eine Rolle an einen bestimmten User (nur Leitung).")
+@app_commands.describe(user="Der User, der die Rolle bekommen soll", rolle="Die Rolle, die vergeben werden soll")
+async def rolle(interaction: discord.Interaction, user: discord.Member, rolle: discord.Role):
+    # Prüfen, ob der Ausführende die Berechtigungsrolle hat
+    berechtigungsrolle = interaction.guild.get_role(1410223848657522698)
+    if berechtigungsrolle not in interaction.user.roles:
+        await interaction.response.send_message("❌ Du hast keine Berechtigung, diesen Befehl zu nutzen.", ephemeral=True)
+        return
+
+    # Rolle hinzufügen
+    try:
+        await user.add_roles(rolle)
+        await interaction.response.send_message(f"✅ {user.mention} hat die Rolle **{rolle.name}** erhalten.")
+    except Exception as e:
+        await interaction.response.send_message(f"⚠️ Fehler: {str(e)}", ephemeral=True)
+
 # --------------------------
 # Slash-Befehl: Ticket-Panel manuell posten
 # --------------------------
