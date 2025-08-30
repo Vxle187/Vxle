@@ -481,6 +481,43 @@ async def rolle(interaction: discord.Interaction, user: discord.Member, rolle: d
 # --------------------------
 # Slash-Befehl: Ticket-Panel manuell posten
 # --------------------------
+# --------------------------
+# Logo für das Ticket-Panel
+# --------------------------
+LOGO_URL = "https://i.ibb.co/0VJG0Lh/bloodlife-logo.png"  # Hochgeladen & verlinkt (damit es dauerhaft lädt)
+
+# --------------------------
+# Ticket-Dropdown-Menü
+# --------------------------
+class TicketSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="📄 Bewerbung", value="bewerbung", description="Erstelle ein Bewerbungsticket"),
+            discord.SelectOption(label="⚠️ Beschwerde", value="beschwerde", description="Melde ein Problem"),
+            discord.SelectOption(label="📢 Leitungsanliegen", value="leitung", description="Kontakt zur Leitung"),
+        ]
+        super().__init__(placeholder="🎫 Wähle einen Ticket-Grund...", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        auswahl = self.values[0]
+        await interaction.response.send_message(
+            f"✅ Ticket für **{auswahl}** wird erstellt...", ephemeral=True
+        )
+        # → Hier kannst du später Channel-Erstellung etc. ergänzen
+
+
+# --------------------------
+# View: Dropdown-Integration
+# --------------------------
+class TicketDropdown(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(TicketSelect())
+
+
+# --------------------------
+# Slash-Command: /tickets
+# --------------------------
 @tree.command(name="tickets", description="Postet das Ticket-Panel in den vorgesehenen Kanal.")
 async def tickets(interaction: discord.Interaction):
     channel = interaction.guild.get_channel(TICKET_PANEL_CHANNEL_ID)
@@ -489,18 +526,21 @@ async def tickets(interaction: discord.Interaction):
         return
 
     embed = discord.Embed(
-        title="🎫 Ticket-System",
+        title="🎫 BloodLife – Ticket-System",
         description=(
-            "Klicke unten auf die passende Schaltfläche, um ein Ticket zu öffnen:\n\n"
-            "📄 **Bewerbung** → Bewerbungen\n"
-            "⚠️ **Beschwerde** → Beschwerden\n"
-            "📢 **Leitungsanliegen** → Direkt zur Leitung"
+            "Wähle unten den Grund für dein Anliegen:\n\n"
+            "📄 **Bewerbung** – Starte deine Karriere bei BloodLife\n"
+            "⚠️ **Beschwerde** – Melde ein Fehlverhalten oder Problem\n"
+            "📢 **Leitungsanliegen** – Kontaktiere direkt die Polizeileitung"
         ),
-        color=discord.Color.blue()
+        color=discord.Color.dark_blue()
     )
-    view = TicketPanel()
-    await channel.send(embed=embed, view=view)
-    await interaction.response.send_message("✅ Ticket-Panel wurde gepostet.", ephemeral=True)
+
+    embed.set_image(url=LOGO_URL)
+
+    await channel.send(embed=embed, view=TicketDropdown())
+    await interaction.response.send_message("✅ Ticket-Panel wurde erfolgreich gepostet.", ephemeral=True)
+
     
 # =========================
 # ✅ Slash-Befehle (einstellen/profil/entlassen/uprank/downrank/dienstnummern)
