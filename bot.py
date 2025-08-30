@@ -651,22 +651,40 @@ async def dienstnummern(interaction: discord.Interaction):
 # =========================
 # Slash-Befehl: Ticket schließen (nur für Leitung/Admins)
 # =========================
-@tree.command(name="ticketclose", description="Schließt das aktuelle Ticket (nur Leitung/Admins).")
-async def ticketclose(interaction: discord.Interaction):
-    # Rechte prüfen
-    if not any(role.id in BEFUGTE_RANG_IDS for role in interaction.user.roles):
-        await interaction.response.send_message("❌ Du hast keine Berechtigung, Tickets zu schließen.", ephemeral=True)
+@tree.command(name="tickets", description="Postet das Ticket-Panel in den vorgesehenen Kanal.")
+async def tickets(interaction: discord.Interaction):
+    # Rechteprüfung: nur User mit der Rolle 1410124850265198602 dürfen das
+    berechtigungsrolle = interaction.guild.get_role(1410124850265198602)
+    if berechtigungsrolle not in interaction.user.roles:
+        await interaction.response.send_message(
+            "❌ Du hast keine Berechtigung, das Ticket-Panel zu posten.", ephemeral=True
+        )
         return
 
-    channel = interaction.channel
-    # Finde Ticket-Eintrag (falls vorhanden)
-    ticket_owner_id = None
-    ticket_data = None
-    for uid, data in user_tickets.items():
-        if data.get("channel_id") == channel.id:
-            ticket_owner_id = uid
-            ticket_data = data
-            break
+    channel = interaction.guild.get_channel(TICKET_PANEL_CHANNEL_ID)
+    if not channel:
+        await interaction.response.send_message("❌ Ticket-Panel-Kanal wurde nicht gefunden.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="🎫 Ticket-System",
+        description=(
+            "Willkommen im Ticketsystem!\n"
+            "Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
+            "📄 **Bewerbung** → Bewerbungen\n"
+            "⚠️ **Beschwerde** → Beschwerden\n"
+            "📢 **Leitungsanliegen** → Direkt zur Leitung"
+        ),
+        color=discord.Color.blue()
+    )
+    embed.set_image(url=LOGO_URL)
+
+    # ✅ Hier wird dein Dropdown-Menü angezeigt
+    view = TicketDropdown()
+
+    await channel.send(embed=embed, view=view)
+    await interaction.response.send_message("✅ Ticket-Panel wurde gepostet.", ephemeral=True)
+
 
     # Wenn es ein Ticket-Channel ist: optionale Transkript-Sendung und Löschung
     if channel and channel.name.startswith("ticket-"):
