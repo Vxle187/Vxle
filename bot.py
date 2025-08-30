@@ -514,10 +514,10 @@ class TicketDropdown(discord.ui.View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
+# =========================
+# ✅ Slash-Befehle (einstellen/profil/entlassen/uprank/downrank/dienstnummern)
+# =========================
 
-# --------------------------
-# Slash-Command: /tickets
-# --------------------------
 @tree.command(name="tickets", description="Postet das Ticket-Panel in den vorgesehenen Kanal.")
 async def tickets(interaction: discord.Interaction):
     channel = interaction.guild.get_channel(TICKET_PANEL_CHANNEL_ID)
@@ -535,16 +535,11 @@ async def tickets(interaction: discord.Interaction):
         ),
         color=discord.Color.dark_blue()
     )
-
     embed.set_image(url=LOGO_URL)
 
     await channel.send(embed=embed, view=TicketDropdown())
     await interaction.response.send_message("✅ Ticket-Panel wurde erfolgreich gepostet.", ephemeral=True)
 
-    
-# =========================
-# ✅ Slash-Befehle (einstellen/profil/entlassen/uprank/downrank/dienstnummern)
-# =========================
 
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
