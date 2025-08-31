@@ -11,6 +11,21 @@ import threading
 import logging
 from datetime import datetime
 from discord.ui import View, Select
+from flask import Flask
+import threading
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot läuft auf Render!"
+
+def run():
+    app.run(host="0.0.0.0", port=10000)
+
+def keep_alive():
+    t = threading.Thread(target=run)
+    t.start()
 
 # Logging aktivieren (für bessere Fehlersuche)
 logging.basicConfig(level=logging.INFO)
