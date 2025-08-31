@@ -250,6 +250,9 @@ async def tickets(interaction: discord.Interaction):
             "⚠️ **Beschwerde** → Beschwerden\n"
             "📢 **Leitungsanliegen** → Direkt zur Leitung"
         )
+embed.set_image(url=LOGO_URL)
+embed.set_thumbnail(url=LOGO_URL)
+embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
     embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL),
@@ -294,6 +297,9 @@ async def ticketclose(interaction: discord.Interaction):
                 antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket_data.get('antworten', []))]) or "_Keine Antworten_"
                 embed = discord.Embed(
                     title=f"🗂 Ticket-Transkript: {ticket_data['art'].capitalize()
+embed.set_image(url=LOGO_URL)
+embed.set_thumbnail(url=LOGO_URL)
+embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
     embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)}",
@@ -355,6 +361,9 @@ async def on_ready():
                     description="Willkommen im Ticketsystem! Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
                                 "**Wichtig:**\nBitte beschreibe dein Anliegen so genau wie möglich.",
                     color=discord.Color.red()
+embed.set_image(url=LOGO_URL)
+embed.set_thumbnail(url=LOGO_URL)
+embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
     embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
@@ -411,6 +420,9 @@ async def on_member_join(member):
                 "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
                 "🛡️ **Falls du Fragen hast**, **wende dich an die Leitung!**"
             )
+embed.set_image(url=LOGO_URL)
+embed.set_thumbnail(url=LOGO_URL)
+embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
     embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL),
@@ -452,6 +464,9 @@ async def on_member_remove(member):
         title="👋 Auf Wiedersehen!",
         description=f"{member.mention} hat den Server verlassen, wir hoffen, wir sehen uns bald wieder!",
         color=discord.Color.dark_grey()
+embed.set_image(url=LOGO_URL)
+embed.set_thumbnail(url=LOGO_URL)
+embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
     embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
@@ -502,6 +517,9 @@ async def on_message(message):
                     antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket['antworten'])]) or "_Keine Antworten gefunden_"
                     embed = discord.Embed(
                         title=f"📩 Neues {ticket['art'].capitalize()
+embed.set_image(url=LOGO_URL)
+embed.set_thumbnail(url=LOGO_URL)
+embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
     embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)}-Ticket (eingereicht)",
@@ -753,6 +771,9 @@ async def dienstnummern(interaction: discord.Interaction):
         title="📋 Dienstnummern-Liste",
         description="Alle registrierten Mitglieder mit Dienstnummer:",
         color=discord.Color.blue()
+embed.set_image(url=LOGO_URL)
+embed.set_thumbnail(url=LOGO_URL)
+embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
     embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
@@ -782,6 +803,9 @@ def build_police_ranking_embed(guild):
         title="📈 Unsere Police Officer",
         description="Hier ist die aktuelle Übersicht des LSPD-Teams:\n",
         color=discord.Color.from_str("#8B0000")
+embed.set_image(url=LOGO_URL)
+embed.set_thumbnail(url=LOGO_URL)
+embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
     embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)  # Dark Red
