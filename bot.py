@@ -263,15 +263,6 @@ async def callback(self, interaction: discord.Interaction):
 # --------------------------
 # Slash-Befehl: Ticket schließen (bereinigt)
 # --------------------------
-@tree.command(name="ticketclose", description="Schließt das aktuelle Ticket (nur Leitung/Admins).")
-async def ticketclose(interaction: discord.Interaction):
-    # Rechteprüfung: nur User mit der Rolle 1410124850265198602 oder Leitung/Admins (BEFUGTE_RANG_IDS)
-    if not any((role.id == 1410124850265198602) or (role.id in BEFUGTE_RANG_IDS) for role in interaction.user.roles):
-        await interaction.response.send_message("❌ Du hast keine Berechtigung, Tickets zu schließen.", ephemeral=True)
-        return
-
-    channel = interaction.channel
-
     # Ticket-Eintrag finden
     ticket_owner_id = None
     ticket_data = None
