@@ -106,11 +106,13 @@ ticket_categories = {
 }
 
 # Mapping Ticket-Art -> Kategorie-ID (nicht Kanal!)
+# --- Ticket-Kategorien (vom Assistant automatisch eingesetzt) ---
 TICKET_CATEGORY_IDS = {
-    "bewerbung": BEWERBUNGEN_CATEGORY_ID,
-    "beschwerde": BESCHWERDEN_CATEGORY_ID,
-    "leitung": LEITUNG_CATEGORY_ID
+    "bewerbung": 1410111339359113318,   # Kategorie-ID für Bewerbungen
+    "beschwerde": 1410111382237483088,  # Kategorie-ID für Beschwerden
+    "leitung": 1410111463783268382      # Kategorie-ID für Leitung
 }
+# ---------------------------------------------------------------
 
 # Laufende Tickets:
 # key = owner_user_id -> value = {
@@ -162,60 +164,93 @@ class TicketSelect(Select):
         ]
         super().__init__(placeholder="Bitte wähle einen Grund", min_values=1, max_values=1, options=options, custom_id="ticket_dropdown")
 
-    async def callback(self, interaction: discord.Interaction):
-        art = self.values[0]
-        guild = interaction.guild
-        owner = interaction.user
+    
+async def callback(self, interaction: discord.Interaction):
+    guild = interaction.guild
+    user = interaction.user
+    # Auswahlwert(e) -> wir nehmen den ersten
+    art = self.values[0] if hasattr(self, "values") and self.values else None
+    if not art:
+        await interaction.response.send_message("Es wurde keine Ticket-Art gewählt.", ephemeral=True)
+        return
 
-        # bereits offenes Ticket?
-        if owner.id in user_tickets:
-            await interaction.response.send_message("⚠️ Du hast bereits ein offenes Ticket. Bitte schließe dieses zuerst oder warte, bis es bearbeitet ist.", ephemeral=True)
-            return
+    # Kategorie holen
+    category_id = TICKET_CATEGORY_IDS.get(art.lower())
+    category = guild.get_channel(category_id) if category_id else None
 
-        # Berechtigungen / Overwrites
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            owner: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)
-        }
+    # Kanalname
+    base_name = f"{art}-{user.name}".replace(" ", "-").lower()
+    channel_name = base_name[:90]  # Discord-Limit Sicherheitskürzung
 
-        # Leitung/Admin Rollen Leserechte geben
-        for role_id in BEFUGTE_RANG_IDS:
-            role = guild.get_role(role_id)
-            if role:
-                overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+    # Rechte
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
+        guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True, manage_messages=True)
+    }
 
-        # Channel-Name sauber generieren
-        safe_name = str(owner.display_name).lower().replace(" ", "-")[:80]
-        channel_name = f"ticket-{safe_name}"
+    # Channel erstellen in Kategorie (falls vorhanden)
+    if isinstance(category, discord.CategoryChannel):
+        ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites, category=category)
+    else:
+        ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
 
-        # Kategorie finden (kann None sein -> Kanal oben in Server root erstellen)
-        category_id = TICKET_CATEGORY_IDS.get(art)
-        category = guild.get_channel(category_id) if category_id else None
+    # Kurze Startnachricht + Fragen
+    try:
+        if art.lower() == "bewerbung":
+            questions = [
+                "Wie heißt du?",
+                "Wie alt bist du?",
+                "Warum möchtest du unserem Team beitreten?",
+                "Hast du bereits Erfahrung (wenn ja, wo)?"
+            ]
+            intro = f"Hallo {user.mention}, willkommen im **Bewerbungs**-Ticket! Bitte beantworte folgende Fragen:"
+        elif art.lower() == "beschwerde":
+            questions = [
+                "Gegen wen richtet sich die Beschwerde? (Name/ID)",
+                "Was ist genau passiert?",
+                "Wann ist es passiert?",
+                "Gibt es Beweise (Screenshots/IDs)?"
+            ]
+            intro = f"Hallo {user.mention}, dies ist dein **Beschwerde**-Ticket. Bitte beantworte:"
+        else:  # leitung
+            questions = [
+                "Worum geht es genau?",
+                "Seit wann besteht das Problem/Anliegen?",
+                "Gab es bereits Versuche, es zu lösen?"
+            ]
+            intro = f"Hallo {user.mention}, **Leitung**-Ticket eröffnet. Bitte beantworte kurz:"
 
-        # Kanal in Kategorie erstellen (wenn vorhanden)
-        if isinstance(category, discord.CategoryChannel):
-            ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites, category=category)
-        else:
-            # Falls Kategorie nicht gefunden, erstelle einfach normalen Kanal
-            ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+        await ticket_channel.send(intro)
 
-        # Ticket-Daten anlegen
-        user_tickets[owner.id] = {
-            "channel_id": ticket_channel.id,
-            "art": art,
-            "fragen": list(ticket_categories[art]),
-            "antworten": [],
-            "completed": False,
-            "owner_id": owner.id,
-            "created_at": datetime.utcnow().isoformat()
-        }
+        answers = []
+        def check(m):
+            return m.channel == ticket_channel and m.author == user
 
-        # Rückmeldung an User und erste Frage schicken
-        await interaction.response.send_message(f"✅ Dein {art}-Ticket wurde erstellt: {ticket_channel.mention}", ephemeral=True)
-        frage = user_tickets[owner.id]["fragen"].pop(0)
-        await ticket_channel.send(f"🎟️ Hallo {owner.mention}, willkommen in deinem **{art.capitalize()}-Ticket**.\nBitte beantworte die folgenden Fragen:")
-        await ticket_channel.send(f"❓ {frage}")
+        for idx, q in enumerate(questions, start=1):
+            await ticket_channel.send(f"**{idx}. {q}**")
+            msg = await interaction.client.wait_for("message", check=check, timeout=600)
+            answers.append((q, msg.content))
+
+        # Zusammenfassung
+        embed = discord.Embed(title=f"Ticket-Zusammenfassung: {art.title()}", color=0x2F3136)
+        embed.add_field(name="User", value=f"{user.mention} ({user.id})", inline=False)
+        for q, a in answers:
+            # Discord Feld-Längen berücksichtigen
+            a_trim = a if len(a) <= 1024 else a[:1021] + "..."
+            embed.add_field(name=q, value=a_trim, inline=False)
+        await ticket_channel.send(content="Danke! Hier ist deine Zusammenfassung:", embed=embed)
+
+    except Exception as e:
+        await ticket_channel.send(f"Beim Abfragen der Antworten ist ein Fehler aufgetreten: `{e}`")
+        # Kein Abbruch der Interaktion hier
+
+    # Ephemere Bestätigung an den Nutzer
+    try:
+        await interaction.response.send_message(f"✅ Ticket erstellt: {ticket_channel.mention}", ephemeral=True)
+    except discord.InteractionResponded:
+        # Falls bereits geantwortet wurde
+        await interaction.followup.send(f"✅ Ticket erstellt: {ticket_channel.mention}", ephemeral=True)
 
 class TicketDropdown(View):
     def __init__(self):
