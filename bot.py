@@ -33,7 +33,7 @@ SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
 POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal (Ranking / Fallback für Transkripte)
-LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1401653566283710667/IMG_2859.png"
+LOGO_URL = "https://static.wikia.nocookie.net/arab-fivem/images/c/c0/LSPD.png/revision/latest?cb=20211028163754"
 
 # **WICHTIG**: Diese IDs sind KATEGORIEN (Discord Category IDs).
 # Beim Erstellen eines Tickets wird ein neuer Text-Channel **in dieser Kategorie** angelegt.
