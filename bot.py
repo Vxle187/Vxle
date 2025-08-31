@@ -170,15 +170,6 @@ def resolve_target_text_channel(guild: discord.Guild, target_id: int) -> discord
 # =========================
 # Dropdown-Ticket-Panel (erstellt neuen Text-Channel IN der entsprechenden Kategorie)
 # =========================
-class TicketSelect(Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="📄 Bewerbung", value="bewerbung", description="Starte deine Bewerbung"),
-            discord.SelectOption(label="⚠️ Beschwerde", value="beschwerde", description="Reiche eine Beschwerde ein"),
-            discord.SelectOption(label="📢 Leitungsanliegen", value="leitung", description="Kontaktiere die Leitung")
-        ]
-        super().__init__(placeholder="Bitte wähle einen Grund", min_values=1, max_values=1, options=options, custom_id="ticket_dropdown")
-
     
 async def callback(self, interaction: discord.Interaction):
     guild = interaction.guild
@@ -266,11 +257,6 @@ async def callback(self, interaction: discord.Interaction):
     except discord.InteractionResponded:
         # Falls bereits geantwortet wurde
         await interaction.followup.send(f"✅ Ticket erstellt: {ticket_channel.mention}", ephemeral=True)
-
-class TicketDropdown(View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(TicketSelect())
 
 
 
@@ -641,15 +627,6 @@ LOGO_URL = "https://i.ibb.co/0VJG0Lh/bloodlife-logo.png"  # Hochgeladen & verlin
 # --------------------------
 # Ticket-Dropdown-Menü
 # --------------------------
-class TicketSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="📄 Bewerbung", value="bewerbung", description="Erstelle ein Bewerbungsticket"),
-            discord.SelectOption(label="⚠️ Beschwerde", value="beschwerde", description="Melde ein Problem"),
-            discord.SelectOption(label="📢 Leitungsanliegen", value="leitung", description="Kontakt zur Leitung"),
-        ]
-        super().__init__(placeholder="🎫 Wähle einen Ticket-Grund...", min_values=1, max_values=1, options=options)
-
     async def callback(self, interaction: discord.Interaction):
         auswahl = self.values[0]
         await interaction.response.send_message(
@@ -661,11 +638,6 @@ class TicketSelect(discord.ui.Select):
 # --------------------------
 # View: Dropdown-Integration
 # --------------------------
-class TicketDropdown(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(TicketSelect())
-
 # =========================
 # ✅ Slash-Befehle (einstellen/profil/entlassen/uprank/downrank/dienstnummern)
 # =========================
@@ -885,3 +857,30 @@ if not TOKEN:
     logging.error("❌ Kein Bot-Token gefunden. Bitte setze die ENV Variable DISCORD_BOT_TOKEN.")
 else:
     bot.run(TOKEN)
+
+class TicketSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="📄 Bewerbung", value="bewerbung", description="Starte deine Bewerbung"),
+            discord.SelectOption(label="⚠️ Beschwerde", value="beschwerde", description="Reiche eine Beschwerde ein"),
+            discord.SelectOption(label="📢 Leitungsanliegen", value="leitung", description="Kontaktiere die Leitung")
+        ]
+        super().__init__(
+            placeholder="Bitte wähle einen Grund",
+            min_values=1,
+            max_values=1,
+            options=options,
+            custom_id="ticket_dropdown"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message(
+            f"✅ Ticket für **{self.values[0]}** wird erstellt...",
+            ephemeral=True
+        )
+        # Hier könntest du die Logik zum Erstellen des Channels ergänzen
+
+class TicketDropdown(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(TicketSelect())
