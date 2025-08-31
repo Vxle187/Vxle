@@ -4,7 +4,7 @@ services:
     runtime: python
     branch: main
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn bot:app
+    startCommand: "python bot.py
 "
     envVars:
       - key: DISCORD_BOT_TOKEN
