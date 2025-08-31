@@ -222,6 +222,94 @@ class TicketDropdown(View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
+
+
+# --------------------------
+# Slash-Befehl: Ticket-Panel manuell posten (bereinigt)
+# --------------------------
+@tree.command(name="tickets", description="Postet das Ticket-Panel in den vorgesehenen Kanal.")
+async def tickets(interaction: discord.Interaction):
+    # Rechteprüfung: nur User mit der Rolle 1410124850265198602 dürfen das
+    berechtigungsrolle = interaction.guild.get_role(1410124850265198602)
+    if berechtigungsrolle not in interaction.user.roles:
+        await interaction.response.send_message(
+            "❌ Du hast keine Berechtigung, das Ticket-Panel zu posten.", ephemeral=True
+        )
+        return
+
+    channel = interaction.guild.get_channel(TICKET_PANEL_CHANNEL_ID)
+    if not channel:
+        await interaction.response.send_message("❌ Ticket-Panel-Kanal wurde nicht gefunden.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="🎫 Ticket-System",
+        description=(
+            "Willkommen im Ticketsystem! Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
+            "📄 **Bewerbung** → Bewerbungen\n"
+            "⚠️ **Beschwerde** → Beschwerden\n"
+            "📢 **Leitungsanliegen** → Direkt zur Leitung"
+        ),
+        color=discord.Color.blue()
+    )
+    embed.set_image(url=LOGO_URL)
+
+    view = TicketDropdown()
+    await channel.send(embed=embed, view=view)
+    await interaction.response.send_message("✅ Ticket-Panel wurde gepostet.", ephemeral=True)
+
+
+
+
+# --------------------------
+# Slash-Befehl: Ticket schließen (bereinigt)
+# --------------------------
+@tree.command(name="ticketclose", description="Schließt das aktuelle Ticket (nur Leitung/Admins).")
+async def ticketclose(interaction: discord.Interaction):
+    # Rechteprüfung: nur User mit der Rolle 1410124850265198602 oder Leitung/Admins (BEFUGTE_RANG_IDS)
+    if not any((role.id == 1410124850265198602) or (role.id in BEFUGTE_RANG_IDS) for role in interaction.user.roles):
+        await interaction.response.send_message("❌ Du hast keine Berechtigung, Tickets zu schließen.", ephemeral=True)
+        return
+
+    channel = interaction.channel
+
+    # Ticket-Eintrag finden
+    ticket_owner_id = None
+    ticket_data = None
+    for uid, data in user_tickets.items():
+        if data.get("channel_id") == channel.id:
+            ticket_owner_id = uid
+            ticket_data = data
+            break
+
+    if channel and channel.name.startswith("ticket-"):
+        # Optional: Transkript an Ziel-Channel senden
+        if ticket_data:
+            category_id = TICKET_CATEGORY_IDS.get(ticket_data["art"])
+            ziel_channel = resolve_target_text_channel(interaction.guild, category_id)
+            if ziel_channel:
+                antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket_data.get('antworten', []))]) or "_Keine Antworten_"
+                embed = discord.Embed(
+                    title=f"🗂 Ticket-Transkript: {ticket_data['art'].capitalize()}",
+                    description=f"Von: <@{ticket_owner_id}> (geschlossen von {interaction.user.mention})",
+                    color=discord.Color.orange()
+                )
+                embed.add_field(name="Antworten", value=antworten_text, inline=False)
+                embed.set_footer(text=f"Erstellt: {ticket_data.get('created_at')}")
+                await ziel_channel.send(embed=embed)
+
+            # Ticket aus Speicher löschen
+            try:
+                del user_tickets[ticket_owner_id]
+            except KeyError:
+                pass
+
+        await interaction.response.send_message("✅ Ticket wird geschlossen und gelöscht.", ephemeral=True)
+        await channel.delete()
+    else:
+        await interaction.response.send_message("❌ Dies ist kein Ticket-Channel.", ephemeral=True)
+
+
 # =========================
 # 📡 EVENTS (on_ready, on_member_update, join/leave, on_message erweitert)
 # =========================
@@ -518,28 +606,6 @@ class TicketDropdown(discord.ui.View):
 # ✅ Slash-Befehle (einstellen/profil/entlassen/uprank/downrank/dienstnummern)
 # =========================
 
-@tree.command(name="tickets", description="Postet das Ticket-Panel in den vorgesehenen Kanal.")
-async def tickets(interaction: discord.Interaction):
-    channel = interaction.guild.get_channel(TICKET_PANEL_CHANNEL_ID)
-    if not channel:
-        await interaction.response.send_message("❌ Ticket-Panel-Kanal wurde nicht gefunden.", ephemeral=True)
-        return
-
-    embed = discord.Embed(
-        title="🎫 BloodLife – Ticket-System",
-        description=(
-            "Wähle unten den Grund für dein Anliegen:\n\n"
-            "📄 **Bewerbung** – Starte deine Karriere bei BloodLife\n"
-            "⚠️ **Beschwerde** – Melde ein Fehlverhalten oder Problem\n"
-            "📢 **Leitungsanliegen** – Kontaktiere direkt die Polizeileitung"
-        ),
-        color=discord.Color.dark_blue()
-    )
-    embed.set_image(url=LOGO_URL)
-
-    await channel.send(embed=embed, view=TicketDropdown())
-    await interaction.response.send_message("✅ Ticket-Panel wurde erfolgreich gepostet.", ephemeral=True)
-
 
 @tree.command(name="einstellen", description="Stellt eine Person ein, gibt Rollen und setzt den Namen.")
 @app_commands.describe(user="Wähle den User aus", dienstnummer="Trage die Dienstnummer ein", name="Trage den Namen ein")
@@ -686,68 +752,6 @@ async def dienstnummern(interaction: discord.Interaction):
 # =========================
 # Slash-Befehl: Ticket schließen (nur für Leitung/Admins)
 # =========================
-@tree.command(name="tickets", description="Postet das Ticket-Panel in den vorgesehenen Kanal.")
-async def tickets(interaction: discord.Interaction):
-    # Rechteprüfung: nur User mit der Rolle 1410124850265198602 dürfen das
-    berechtigungsrolle = interaction.guild.get_role(1410124850265198602)
-    if berechtigungsrolle not in interaction.user.roles:
-        await interaction.response.send_message(
-            "❌ Du hast keine Berechtigung, das Ticket-Panel zu posten.", ephemeral=True
-        )
-        return
-
-    channel = interaction.guild.get_channel(TICKET_PANEL_CHANNEL_ID)
-    if not channel:
-        await interaction.response.send_message("❌ Ticket-Panel-Kanal wurde nicht gefunden.", ephemeral=True)
-        return
-
-    embed = discord.Embed(
-        title="🎫 Ticket-System",
-        description=(
-            "Willkommen im Ticketsystem!\n"
-            "Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
-            "📄 **Bewerbung** → Bewerbungen\n"
-            "⚠️ **Beschwerde** → Beschwerden\n"
-            "📢 **Leitungsanliegen** → Direkt zur Leitung"
-        ),
-        color=discord.Color.blue()
-    )
-    embed.set_image(url=LOGO_URL)
-
-    # ✅ Hier wird dein Dropdown-Menü angezeigt
-    view = TicketDropdown()
-
-    await channel.send(embed=embed, view=view)
-    await interaction.response.send_message("✅ Ticket-Panel wurde gepostet.", ephemeral=True)
-
-
-    # Wenn es ein Ticket-Channel ist: optionale Transkript-Sendung und Löschung
-    if channel and channel.name.startswith("ticket-"):
-        # Wenn Ticket-Daten vorhanden -> sende Transkript an Ziel-Channel
-        if ticket_data:
-            category_id = TICKET_CATEGORY_IDS.get(ticket_data["art"])
-            ziel_channel = resolve_target_text_channel(interaction.guild, category_id)
-            if ziel_channel:
-                antworten_text = "\n".join([f"**Antwort {i+1}:** {a}" for i, a in enumerate(ticket_data.get('antworten', []))]) or "_Keine Antworten_"
-                embed = discord.Embed(
-                    title=f"🗂 Ticket-Transkript: {ticket_data['art'].capitalize()}",
-                    description=f"Von: <@{ticket_owner_id}> (geschlossen von {interaction.user.mention})",
-                    color=discord.Color.orange()
-                )
-                embed.add_field(name="Antworten", value=antworten_text, inline=False)
-                embed.set_footer(text=f"Erstellt: {ticket_data.get('created_at')}")
-                await ziel_channel.send(embed=embed)
-
-            # Ticket aus Speicher entfernen
-            try:
-                del user_tickets[ticket_owner_id]
-            except KeyError:
-                pass
-
-        await interaction.response.send_message("✅ Ticket wird geschlossen und gelöscht.", ephemeral=True)
-        await channel.delete()
-    else:
-        await interaction.response.send_message("❌ Dies ist kein Ticket-Channel.", ephemeral=True)
 
 # =========================
 # Hilfsfunktion: Embed bauen (mit gedrehter Reihenfolge)
