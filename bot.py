@@ -627,7 +627,7 @@ LOGO_URL = "https://i.ibb.co/0VJG0Lh/bloodlife-logo.png"  # Hochgeladen & verlin
 # --------------------------
 # Ticket-Dropdown-Menü
 # --------------------------
-async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         auswahl = self.values[0]
         await interaction.response.send_message(
             f"✅ Ticket für **{auswahl}** wird erstellt...", ephemeral=True
@@ -873,7 +873,7 @@ class TicketSelect(discord.ui.Select):
             custom_id="ticket_dropdown"
         )
 
-async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_message(
             f"✅ Ticket für **{self.values[0]}** wird erstellt...",
             ephemeral=True
@@ -881,8 +881,6 @@ async def callback(self, interaction: discord.Interaction):
         # Hier könntest du die Logik zum Erstellen des Channels ergänzen
 
 class TicketDropdown(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
