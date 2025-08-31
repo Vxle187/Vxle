@@ -114,13 +114,13 @@ TICKET_CATEGORY_IDS = {
 }
 # ---------------------------------------------------------------
 
- Laufende Tickets:
- key = owner_user_id -> value = {
-   'channel_id': int,
-   'art': 'bewerbung'|'beschwerde'|'leitung',
-   'fragen': [...remaining...],
-   'antworten': [...],
-   'completed': bool
+# Laufende Tickets:
+#key = owner_user_id -> value = {
+#   'channel_id': int,
+#  'art': 'bewerbung'|'beschwerde'|'leitung',
+#   'fragen': [...remaining...],
+#  'antworten': [...],
+#'completed': bool
  }
 user_tickets = {}
 
