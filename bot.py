@@ -155,109 +155,58 @@ def resolve_target_text_channel(guild: discord.Guild, target_id: int) -> discord
 # =========================
 # Dropdown-Ticket-Panel (erstellt neuen Text-Channel IN der entsprechenden Kategorie)
 # =========================
-class TicketSelect(Select):
+class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="📄 Bewerbung", value="bewerbung", description="Starte deine Bewerbung"),
-            discord.SelectOption(label="⚠️ Beschwerde", value="beschwerde", description="Reiche eine Beschwerde ein"),
-            discord.SelectOption(label="📢 Leitungsanliegen", value="leitung", description="Kontaktiere die Leitung")
+            discord.SelectOption(label="📄 Bewerbung", value="bewerbung"),
+            discord.SelectOption(label="⚠️ Beschwerde", value="beschwerde"),
+            discord.SelectOption(label="📢 Leitungsanliegen", value="leitung")
         ]
-        super().__init__(placeholder="Bitte wähle einen Grund", min_values=1, max_values=1, options=options, custom_id="ticket_dropdown")
+        super().__init__(placeholder="🎫 Wähle einen Ticket-Grund...", min_values=1, max_values=1, options=options, custom_id="ticket_dropdown")
 
-    
-async def callback(self, interaction: discord.Interaction):
-    guild = interaction.guild
-    user = interaction.user
-    # Auswahlwert(e) -> wir nehmen den ersten
-    art = self.values[0] if hasattr(self, "values") and self.values else None
-    if not art:
-        await interaction.response.send_message("Es wurde keine Ticket-Art gewählt.", ephemeral=True)
-        return
+    async def callback(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        user = interaction.user
+        art = self.values[0]
 
-    # Kategorie holen
-    category_id = TICKET_CATEGORY_IDS.get(art.lower())
-    category = guild.get_channel(category_id) if category_id else None
+        # Kategorie laden
+        category_id = TICKET_CATEGORY_IDS.get(art)
+        category = guild.get_channel(category_id)
 
-    # Kanalname
-    base_name = f"{art}-{user.name}".replace(" ", "-").lower()
-    channel_name = base_name[:90]  # Discord-Limit Sicherheitskürzung
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True)
+        }
 
-    # Rechte
-    overwrites = {
-        guild.default_role: discord.PermissionOverwrite(view_channel=False),
-        user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
-        guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True, manage_messages=True)
-    }
+        # Channel erstellen
+        ticket_channel = await guild.create_text_channel(
+            name=f"{art}-{user.name}".lower(),
+            overwrites=overwrites,
+            category=category
+        )
 
-    # Channel erstellen in Kategorie (falls vorhanden)
-    if isinstance(category, discord.CategoryChannel):
-        ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites, category=category)
-    else:
-        ticket_channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
+        # Ticket in Speicher eintragen
+        user_tickets[user.id] = {
+            "channel_id": ticket_channel.id,
+            "art": art,
+            "fragen": ticket_categories[art].copy(),
+            "antworten": [],
+            "completed": False,
+            "created_at": datetime.utcnow().strftime("%d.%m.%Y %H:%M")
+        }
 
-    # Kurze Startnachricht + Fragen
-    try:
-        if art.lower() == "bewerbung":
-            questions = [
-                "Wie heißt du?",
-                "Wie alt bist du?",
-                "Warum möchtest du unserem Team beitreten?",
-                "Hast du bereits Erfahrung (wenn ja, wo)?"
-            ]
-            intro = f"Hallo {user.mention}, willkommen im **Bewerbungs**-Ticket! Bitte beantworte folgende Fragen:"
-        elif art.lower() == "beschwerde":
-            questions = [
-                "Gegen wen richtet sich die Beschwerde? (Name/ID)",
-                "Was ist genau passiert?",
-                "Wann ist es passiert?",
-                "Gibt es Beweise (Screenshots/IDs)?"
-            ]
-            intro = f"Hallo {user.mention}, dies ist dein **Beschwerde**-Ticket. Bitte beantworte:"
-        else:  # leitung
-            questions = [
-                "Worum geht es genau?",
-                "Seit wann besteht das Problem/Anliegen?",
-                "Gab es bereits Versuche, es zu lösen?"
-            ]
-            intro = f"Hallo {user.mention}, **Leitung**-Ticket eröffnet. Bitte beantworte kurz:"
+        await ticket_channel.send(f"Hallo {user.mention}, bitte beantworte die folgenden Fragen:")
+        erste_frage = user_tickets[user.id]["fragen"].pop(0)
+        await ticket_channel.send(f"❓ {erste_frage}")
 
-        await ticket_channel.send(intro)
-
-        answers = []
-        def check(m):
-            return m.channel == ticket_channel and m.author == user
-
-        for idx, q in enumerate(questions, start=1):
-            await ticket_channel.send(f"**{idx}. {q}**")
-            msg = await interaction.client.wait_for("message", check=check, timeout=600)
-            answers.append((q, msg.content))
-
-        # Zusammenfassung
-        embed = discord.Embed(title=f"Ticket-Zusammenfassung: {art.title()}", color=0x2F3136)
-        embed.add_field(name="User", value=f"{user.mention} ({user.id})", inline=False)
-        for q, a in answers:
-            # Discord Feld-Längen berücksichtigen
-            a_trim = a if len(a) <= 1024 else a[:1021] + "..."
-            embed.add_field(name=q, value=a_trim, inline=False)
-        await ticket_channel.send(content="Danke! Hier ist deine Zusammenfassung:", embed=embed)
-
-    except Exception as e:
-        await ticket_channel.send(f"Beim Abfragen der Antworten ist ein Fehler aufgetreten: `{e}`")
-        # Kein Abbruch der Interaktion hier
-
-    # Ephemere Bestätigung an den Nutzer
-    try:
         await interaction.response.send_message(f"✅ Ticket erstellt: {ticket_channel.mention}", ephemeral=True)
-    except discord.InteractionResponded:
-        # Falls bereits geantwortet wurde
-        await interaction.followup.send(f"✅ Ticket erstellt: {ticket_channel.mention}", ephemeral=True)
 
-class TicketDropdown(View):
+
+class TicketDropdown(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
-
-
 
 # --------------------------
 # Slash-Befehl: Ticket-Panel manuell posten (bereinigt)
