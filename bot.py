@@ -121,7 +121,7 @@ TICKET_CATEGORY_IDS = {
 #   'fragen': [...remaining...],
 #  'antworten': [...],
 #'completed': bool
- }
+# }
 user_tickets = {}
 
 # =========================
