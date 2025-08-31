@@ -584,12 +584,56 @@ class TicketSelect(discord.ui.Select):
         ]
         super().__init__(placeholder="🎫 Wähle einen Ticket-Grund...", min_values=1, max_values=1, options=options)
 
-    async def callback(self, interaction: discord.Interaction):
-        auswahl = self.values[0]
+async def callback(self, interaction: discord.Interaction):
+    guild = interaction.guild
+    user = interaction.user
+    art = self.values[0]
+
+    # Kategorie laden
+    category_id = TICKET_CATEGORY_IDS.get(art)
+    category = guild.get_channel(category_id)
+
+    if not category or not isinstance(category, discord.CategoryChannel):
         await interaction.response.send_message(
-            f"✅ Ticket für **{auswahl}** wird erstellt...", ephemeral=True
+            f"❌ Konnte Kategorie für `{art}` nicht finden (ID: {category_id})!",
+            ephemeral=True
         )
-        # → Hier kannst du später Channel-Erstellung etc. ergänzen
+        return
+
+    # Kanalrechte
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
+        guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True, manage_messages=True)
+    }
+
+    # Channel in Kategorie erstellen
+    ticket_channel = await guild.create_text_channel(
+        name=f"{art}-{user.name}".lower(),
+        overwrites=overwrites,
+        category=category
+    )
+
+    # Ticket in Speicher eintragen
+    user_tickets[user.id] = {
+        "channel_id": ticket_channel.id,
+        "art": art,
+        "fragen": ticket_categories[art].copy(),
+        "antworten": [],
+        "completed": False,
+        "created_at": datetime.utcnow().strftime("%d.%m.%Y %H:%M")
+    }
+
+    # Erste Frage stellen
+    await ticket_channel.send(f"👋 Hallo {user.mention}, bitte beantworte die folgenden Fragen für dein **{art}**-Ticket:")
+    erste_frage = user_tickets[user.id]["fragen"].pop(0)
+    await ticket_channel.send(f"❓ {erste_frage}")
+
+    # Antwort an den User (ephemeral)
+    await interaction.response.send_message(
+        f"✅ Ticket erstellt: {ticket_channel.mention}",
+        ephemeral=True
+    )
 
 
 # --------------------------
