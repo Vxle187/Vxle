@@ -245,10 +245,10 @@ async def tickets(interaction: discord.Interaction):
     embed = discord.Embed(
         title="🎫 Ticket-System",
         description=(
-            "Willkommen im Ticketsystem! Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
-            "📄 **Bewerbung** → Bewerbungen\n"
-            "⚠️ **Beschwerde** → Beschwerden\n"
-            "📢 **Leitungsanliegen** → Direkt zur Leitung"
+    description=("Willkommen im Ticketsystem! Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
+    description=("📄 **Bewerbung** → Bewerbungen\n"
+    description=("⚠️ **Beschwerde** → Beschwerden\n"
+    description=("📢 **Leitungsanliegen** → Direkt zur Leitung"
         )
 embed.set_image(url=LOGO_URL)
 embed.set_thumbnail(url=LOGO_URL)
@@ -358,8 +358,8 @@ async def on_ready():
             if should_post:
                 embed = discord.Embed(
                     title="🎫 Ticket-System",
-                    description="Willkommen im Ticketsystem! Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
-                                "**Wichtig:**\nBitte beschreibe dein Anliegen so genau wie möglich.",
+                    description="Willkommen im Ticketsystem! Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"(
+    "**Wichtig:**\nBitte beschreibe dein Anliegen so genau wie möglich.",
                     color=discord.Color.red()
 embed.set_image(url=LOGO_URL)
 embed.set_thumbnail(url=LOGO_URL)
@@ -416,9 +416,9 @@ async def on_member_join(member):
         embed = discord.Embed(
             title=f"<@{member.id}>, willkommen auf **Blood Life Police Department** 👮",
             description=(
-                "📚 **Schön, dass du da bist!**\n"
-                "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
-                "🛡️ **Falls du Fragen hast**, **wende dich an die Leitung!**"
+    description=("📚 **Schön, dass du da bist!**\n"
+    description=("❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
+    description=("🛡️ **Falls du Fragen hast**, **wende dich an die Leitung!**"
             )
 embed.set_image(url=LOGO_URL)
 embed.set_thumbnail(url=LOGO_URL)
