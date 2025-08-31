@@ -6,6 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import os
+import re
 from flask import Flask
 import threading
 import logging
@@ -873,12 +874,56 @@ class TicketSelect(discord.ui.Select):
             custom_id="ticket_dropdown"
         )
 
+    
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_message(
-            f"✅ Ticket für **{self.values[0]}** wird erstellt...",
-            ephemeral=True
+        choice = self.values[0]
+        # Mapping to category IDs
+        cat_id = TICKET_CATEGORY_IDS.get(choice)
+        guild = interaction.guild
+        if not guild or not cat_id:
+            await interaction.response.send_message("🚫 Konnte Kategorie nicht finden.", ephemeral=True)
+            return
+        category = guild.get_channel(cat_id)
+        if category is None or category.type != discord.ChannelType.category:
+            category = await guild.fetch_channel(cat_id)
+
+        # Overwrites
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False)
+        }
+        overwrites[interaction.user] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True)
+        # Bewerbungen: zusätzlich Personalabteilung
+        if choice == "bewerbung":
+            role = guild.get_role(PERSONALABTEILUNG_ROLE_ID)
+            if role:
+                overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, manage_messages=True, attach_files=True, embed_links=True)
+
+        # Create channel
+        safe_name = re.sub(r'[^a-z0-9-]+', '-', f"{interaction.user.name}".lower())
+        channel_name = f"ticket-{choice}-{safe_name}"[:90]
+        channel = await guild.create_text_channel(
+            name=channel_name,
+            category=category,
+            overwrites=overwrites,
+            reason=f"Ticket eröffnet von {interaction.user} ({choice})"
         )
-        # Hier könntest du die Logik zum Erstellen des Channels ergänzen
+
+        # Acknowledge
+        await interaction.response.send_message(f"✅ Dein Ticket wurde erstellt: {channel.mention}", ephemeral=True)
+
+        # First message in ticket
+        embed = discord.Embed(
+            title="🎫 Ticket eröffnet",
+            description=f"Hallo {interaction.user.mention},
+
+"
+                        f"dies ist dein privater Ticket-Channel für **{choice.capitalize()}**.
+"
+                        f"Bitte beschreibe dein Anliegen so genau wie möglich.",
+            color=discord.Color.blurple()
+        )
+        await channel.send(content=f"{interaction.user.mention}", embed=embed)
+
 
 class TicketDropdown(discord.ui.View):
     def __init__(self):
