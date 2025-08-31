@@ -261,45 +261,6 @@ async def callback(self, interaction: discord.Interaction):
 
 
 # --------------------------
-# Slash-Befehl: Ticket-Panel manuell posten (bereinigt)
-# --------------------------
-@tree.command(name="tickets", description="Postet das Ticket-Panel in den vorgesehenen Kanal.")
-async def tickets(interaction: discord.Interaction):
-    # Rechteprüfung: nur User mit der Rolle 1410124850265198602 dürfen das
-    berechtigungsrolle = interaction.guild.get_role(1410124850265198602)
-    if berechtigungsrolle not in interaction.user.roles:
-        await interaction.response.send_message(
-            "❌ Du hast keine Berechtigung, das Ticket-Panel zu posten.", ephemeral=True
-        )
-        return
-
-    channel = interaction.guild.get_channel(TICKET_PANEL_CHANNEL_ID)
-    if not channel:
-        await interaction.response.send_message("❌ Ticket-Panel-Kanal wurde nicht gefunden.", ephemeral=True)
-        return
-
-    embed = discord.Embed(
-        title="🎫 Ticket-System",
-        description=(
-            "Willkommen im Ticketsystem! Bitte wähle einen Grund aus, um dein Ticket zu erstellen.\n\n"
-            "📌 **Kategorien:**\n"
-            "• Bewerbungen – für Team-Bewerbungen\n"
-            "• Beschwerden – für Meldungen/Reports\n"
-            "• Leitung – für Anliegen an die Serverleitung\n"
-        ),
-        color=discord.Color.blue()
-    )
-    embed.set_image(url=LOGO_URL)
-    embed.set_thumbnail(url=LOGO_URL)
-    embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
-    view = TicketDropdown()
-    await channel.send(embed=embed, view=view)
-    await interaction.response.send_message("✅ Ticket-Panel wurde gepostet.", ephemeral=True)
-
-
-
-
-# --------------------------
 # Slash-Befehl: Ticket schließen (bereinigt)
 # --------------------------
 @tree.command(name="ticketclose", description="Schließt das aktuelle Ticket (nur Leitung/Admins).")
