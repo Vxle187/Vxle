@@ -48,7 +48,7 @@ SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
 POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal (Ranking / Fallback für Transkripte)
-LOGO_URL = "https://cdn.discordapp.com/attachments/1396969116195360941/1411723745546211409/BLCP-Logo2_3.png?ex=68b65a71&is=68b508f1&hm=db17aca087b7d67668942db4be25592146bc4e3d3f8e29c416f0c79f3c465a3d&"
+LOGO_URL = "https://i.imgur.com/NVC00ov.png"
 
 # **WICHTIG**: Diese IDs sind KATEGORIEN (Discord Category IDs).
 # Beim Erstellen eines Tickets wird ein neuer Text-Channel **in dieser Kategorie** angelegt.
