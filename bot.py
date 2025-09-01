@@ -366,21 +366,19 @@ async def on_member_join(member):
                 "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
                 "🛡️ **Falls du Fragen hast**, **wende dich an die Leitung!**"
             ),
-            color=discord.Color.blue()  # Blau für Join
+            color=discord.Color.dark_blue()
         )
-        embed.set_thumbnail(url=LOGO_URL)
         embed.set_author(
             name="Police Department | BloodLife",
-            icon_url=member.guild.icon.url if member.guild.icon else LOGO_URL
+            icon_url=member.guild.icon.url if member.guild.icon else None
         )
+        embed.set_image(url=LOGO_URL)
         embed.set_footer(
-            text="BloodLife Police Department | Made by Vxle",
-            icon_url=LOGO_URL
+            text="BloodLife Police Department | Made by Vxle"
         )
         await channel.send(embed=embed)
 
-    # Automatisch Rolle vergeben (falls gewünscht)
-    auto_role_id = 1396969113955602563  # deine Rekrut-Rolle o.ä.
+    auto_role_id = 1396969113955602563
     role = member.guild.get_role(auto_role_id)
     if role:
         try:
@@ -392,7 +390,6 @@ async def on_member_join(member):
             logging.warning(f"❌ Fehler beim Vergeben der Rolle an {member}: {e}")
     else:
         logging.warning(f"⚠️ Rolle mit ID {auto_role_id} nicht gefunden.")
-
 
 @bot.event
 async def on_member_remove(member):
@@ -406,16 +403,15 @@ async def on_member_remove(member):
     embed = discord.Embed(
         title="👋 Auf Wiedersehen!",
         description=f"{member.mention} hat den Server verlassen, wir hoffen, wir sehen uns bald wieder!",
-        color=discord.Color.light_grey()  # Grau für Leave
+        color=discord.Color.dark_grey()
     )
-    embed.set_thumbnail(url=LOGO_URL)
+    embed.set_image(url=LOGO_URL)
     embed.set_author(
-        name="Police Department | BloodLife",
-        icon_url=member.guild.icon.url if member.guild.icon else LOGO_URL
+        name="Police Department | Blood Life",
+        icon_url=member.guild.icon.url if member.guild.icon else None
     )
-    embed.set_footer(
-        text="BloodLife Police Department | Made by Vxle",
-        icon_url=LOGO_URL
+    embed.set_footer(text="BloodLife Police Department | Made by Vxle")
+    await channel.send(embed=embed)
         
 # -------------------------
 # Ticket-Antworten verarbeiten (nur EIN on_message vorhanden)
