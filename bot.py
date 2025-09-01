@@ -369,15 +369,16 @@ async def on_member_join(member):
     
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
+        
         embed = discord.Embed(
-            title=f"{member.mention}, willkommen auf **Blood Life Police Department** 👮",
-            description=(
-                "📚 **Schön, dass du da bist!**\n"
-                "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
-                "🛡️ **Falls du Fragen hast**, **wende dich an die Leitung!**"
-            ),
-            color=discord.Color.dark_blue()
-        )
+    title="👮 Willkommen auf **Blood Life Police Department**",
+    description=(
+        f"{member.mention}, schön, dass du da bist!\n\n"
+        "📚 **Bitte halte dich im Dienst an die Funkcodes**\n"
+        "🛡️ **Falls du Fragen hast, wende dich an die Leitung!**"
+    ),
+    color=discord.Color.dark_blue()
+)
         embed.set_author(
             name="Police Department | BloodLife",
             icon_url=member.guild.icon.url if member.guild.icon else None
