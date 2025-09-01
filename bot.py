@@ -353,39 +353,6 @@ async def on_ready():
                 logging.info("📌 Ticket-Panel im Kanal gepostet.")
 
 @bot.event
-async def on_member_update(before, after):
-    before_roles = set(role.id for role in before.roles)
-    after_roles = set(role.id for role in after.roles)
-
-    if before_roles == after_roles:
-        return  # keine Rollenänderung
-
-    # Prüfen, ob sich Rollen aus der Police-Liste geändert haben
-    role_change = any(
-        (role_id in before_roles) != (role_id in after_roles)
-        for role_id in POLICE_ROLLEN_IDS
-    )
-    if not role_change:
-        return
-
-    channel = after.guild.get_channel(POST_CHANNEL_ID)
-    if channel:
-        # Alte Ranglisten-Nachricht löschen
-        async for msg in channel.history(limit=50):
-            if msg.author == bot.user and msg.embeds:
-                embed = msg.embeds[0]
-                if embed.title == "📈 Unsere Police Officer":
-                    try:
-                        await msg.delete()
-                    except discord.Forbidden:
-                        logging.warning("Keine Berechtigung, alte Nachricht zu löschen.")
-                    break
-
-        # Neue Rangliste senden
-        embed = build_police_ranking_embed(after.guild)
-        await channel.send(embed=embed)
-
-@bot.event
 async def on_member_join(member):
     if member.guild.id != SERVER_ID:
         return
@@ -399,22 +366,21 @@ async def on_member_join(member):
                 "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
                 "🛡️ **Falls du Fragen hast**, **wende dich an die Leitung!**"
             ),
-            color=discord.Color.green()
+            color=discord.Color.blue()  # Blau für Join
         )
         embed.set_thumbnail(url=LOGO_URL)
-        embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
-        await channel.send(embed=embed)
         embed.set_author(
             name="Police Department | BloodLife",
-            icon_url=member.guild.icon.url if member.guild.icon else None
+            icon_url=member.guild.icon.url if member.guild.icon else LOGO_URL
         )
-        embed.set_image(url=LOGO_URL)
         embed.set_footer(
-            text="Willkommen auf dem BloodLife Police Department Discord!"
+            text="BloodLife Police Department | Made by Vxle",
+            icon_url=LOGO_URL
         )
         await channel.send(embed=embed)
 
-    auto_role_id = 1396969113955602563
+    # Automatisch Rolle vergeben (falls gewünscht)
+    auto_role_id = 1396969113955602563  # deine Rekrut-Rolle o.ä.
     role = member.guild.get_role(auto_role_id)
     if role:
         try:
@@ -426,6 +392,7 @@ async def on_member_join(member):
             logging.warning(f"❌ Fehler beim Vergeben der Rolle an {member}: {e}")
     else:
         logging.warning(f"⚠️ Rolle mit ID {auto_role_id} nicht gefunden.")
+
 
 @bot.event
 async def on_member_remove(member):
@@ -439,13 +406,17 @@ async def on_member_remove(member):
     embed = discord.Embed(
         title="👋 Auf Wiedersehen!",
         description=f"{member.mention} hat den Server verlassen, wir hoffen, wir sehen uns bald wieder!",
-        color=discord.Color.dark_grey()
+        color=discord.Color.light_grey()  # Grau für Leave
     )
-    embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
-    embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
-    await channel.send(embed=embed)
-
+    embed.set_author(
+        name="Police Department | BloodLife",
+        icon_url=member.guild.icon.url if member.guild.icon else LOGO_URL
+    )
+    embed.set_footer(
+        text="BloodLife Police Department | Made by Vxle",
+        icon_url=LOGO_URL
+        
 # -------------------------
 # Ticket-Antworten verarbeiten (nur EIN on_message vorhanden)
 # -------------------------
