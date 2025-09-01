@@ -352,6 +352,16 @@ async def on_ready():
                 await panel_channel.send(embed=embed, view=view)
                 logging.info("📌 Ticket-Panel im Kanal gepostet.")
 
+# =========================
+# Server und Kanal-IDs (deine Werte)
+# =========================
+SERVER_ID = 1396969113955602562  # Deine Server-ID
+WILLKOMMEN_KANAL_ID = 1396969114039226598
+LEAVE_KANAL_ID = 1396969114442006538
+POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal (Ranking / Fallback für Transkripte)
+LOGO_FILE = "BLCP-Logo2-3.png"  # Dein Logo muss lokal im Projektordner liegen
+
+
 @bot.event
 async def on_member_join(member):
     if member.guild.id != SERVER_ID:
@@ -360,7 +370,7 @@ async def on_member_join(member):
     channel = member.guild.get_channel(WILLKOMMEN_KANAL_ID)
     if channel:
         embed = discord.Embed(
-            title=f"<@{member.id}>, willkommen auf **Blood Life Police Department** 👮",
+            title=f"{member.mention}, willkommen auf **Blood Life Police Department** 👮",
             description=(
                 "📚 **Schön, dass du da bist!**\n"
                 "❗ **Bitte halte dich im Dienst an die Funkcodes**\n\n"
@@ -372,14 +382,15 @@ async def on_member_join(member):
             name="Police Department | BloodLife",
             icon_url=member.guild.icon.url if member.guild.icon else None
         )
-        embed.set_thumbnail(url=LOGO_URL)   # kleines Logo oben rechts
-        embed.set_image(url=LOGO_URL)       # großes Logo unten
+        embed.set_thumbnail(url="attachment://logo.png")   # kleines Logo oben rechts
+        embed.set_image(url="attachment://logo.png")       # großes Logo unten
         embed.set_footer(
             text="BloodLife Police Department | Made by Vxle",
-            icon_url=LOGO_URL
+            icon_url="attachment://logo.png"
         )
         
-        await channel.send(embed=embed)
+        file = discord.File(LOGO_FILE, filename="logo.png")
+        await channel.send(embed=embed, file=file)
 
     # Auto-Role vergeben
     auto_role_id = 1396969113955602563
@@ -414,16 +425,17 @@ async def on_member_remove(member):
         name="Police Department | Blood Life",
         icon_url=member.guild.icon.url if member.guild.icon else None
     )
-    embed.set_thumbnail(url=LOGO_URL)   # kleines Logo oben rechts
-    embed.set_image(url=LOGO_URL)       # großes Logo unten
+    embed.set_thumbnail(url="attachment://logo.png")   # kleines Logo oben rechts
+    embed.set_image(url="attachment://logo.png")       # großes Logo unten
     embed.set_footer(
         text="BloodLife Police Department | Made by Vxle",
-        icon_url=LOGO_URL
+        icon_url="attachment://logo.png"
     )
 
-    await channel.send(embed=embed)
+    file = discord.File(LOGO_FILE, filename="logo.png")
+    await channel.send(embed=embed, file=file)
 
-        
+
 # -------------------------
 # Ticket-Antworten verarbeiten (nur EIN on_message vorhanden)
 # -------------------------
