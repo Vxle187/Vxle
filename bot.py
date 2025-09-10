@@ -1,3 +1,48 @@
+import discord
+from discord import app_commands
+from discord.ext import commands
+import asyncio
+import datetime
+import os
+
+# ---------- CONFIG ----------
+DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")  # Render-Umgebungsvariable
+GUILD_ID = 1396969113955602562  # <- DEINE SERVER ID hier!
+LOG_CHANNEL_ID = 1397304957518221312
+TICKET_CHANNEL_ID = 1396969114442006539  # <- Channel ID, wo die Setup Nachricht automatisch rein soll
+LOGO_URL = "https://i.ibb.co/DHMjTcWC/BLCP-Logo2-3.png"
+
+# Kategorien
+TICKET_CATEGORY_IDS = {
+    "bewerbungen": 1410111339359113318,
+    "beschwerden": 1410111382237483088,
+    "leitungs-anliegen": 1410111463783268382,
+}
+
+# Rollen mit Schließen-Recht
+BEFUGTE_RANG_IDS = [1410124850265198602]
+
+# Fragen je Ticket-Art
+TICKET_FRAGEN = {
+    "bewerbungen": [
+        "Wie lautet dein vollständiger Name?",
+        "Wie alt bist du?",
+        "Warum möchtest du Teil des Teams werden?",
+    ],
+    "beschwerden": [
+        "Gegen wen oder was richtet sich deine Beschwerde?",
+        "Bitte beschreibe den Vorfall ausführlich.",
+        "Hast du Beweise (z.B. Screenshots, Clips)?",
+    ],
+    "leitungs-anliegen": [
+        "Bitte beschreibe dein Anliegen an die Leitung.",
+        "Welche Lösung wünschst du dir?",
+    ],
+}
+
+# Speicher im RAM (nicht persistent!)
+user_tickets = {}
+
 # ----------------------------------
 # LSPD Discord Bot
 # ----------------------------------
