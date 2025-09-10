@@ -47,7 +47,8 @@ tree = bot.tree
 SERVER_ID = 1396969113955602562  # Deine Server-ID
 WILLKOMMEN_KANAL_ID = 1396969114039226598
 LEAVE_KANAL_ID = 1396969114442006538
-POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal (Ranking / Fallback für Transkripte)
+POST_CHANNEL_ID = 1401148941751550004 # Post-Kanal (Ranking / Fallback für Transkripte)
+EINSTELLUNGSKANAL_ID = 1401148941751550004
 LOGO_URL = "https://i.ibb.co/DHMjTcWC/BLCP-Logo2-3.png"
 
 # **WICHTIG**: Diese IDs sind KATEGORIEN (Discord Category IDs).
@@ -348,15 +349,6 @@ async def on_ready():
                 view = TicketDropdown()
                 await panel_channel.send(embed=embed, view=view)
                 logging.info("📌 Ticket-Panel im Kanal gepostet.")
-
-# =========================
-# Server und Kanal-IDs (deine Werte)
-# =========================
-SERVER_ID = 1401148940812026038  # Deine Server-ID
-WILLKOMMEN_KANAL_ID = 1401148941751550003
-LEAVE_KANAL_ID = 1401148941751550005
-POST_CHANNEL_ID = 1401148941751550006  # Post-Kanal (Ranking / Fallback für Transkripte)
-LOGO_FILE = ""  # Dein Logo muss lokal im Projektordner liegen
 
 
 @bot.event
