@@ -1,5 +1,5 @@
 # ----------------------------------
-# LSPD Discord Bot (überarbeitet + komplettes Ticketsystem mit Kategorien)
+# LSPD Discord Bot
 # ----------------------------------
 
 import discord
@@ -52,12 +52,12 @@ LOGO_URL = "https://i.ibb.co/DHMjTcWC/BLCP-Logo2-3.png"
 
 # **WICHTIG**: Diese IDs sind KATEGORIEN (Discord Category IDs).
 # Beim Erstellen eines Tickets wird ein neuer Text-Channel **in dieser Kategorie** angelegt.
-BEWERBUNGEN_CATEGORY_ID = 1410111339359113318
-BESCHWERDEN_CATEGORY_ID = 1410111382237483088
-LEITUNG_CATEGORY_ID = 1410111463783268382
+BEWERBUNGEN_CATEGORY_ID = 1401179323699957830
+BESCHWERDEN_CATEGORY_ID = 1415386899358421075
+LEITUNG_CATEGORY_ID = 1401181266623205526
 
 # Kanal in dem das Ticket-Panel automatisch gepostet werden soll
-TICKET_PANEL_CHANNEL_ID = 1396969114442006539
+TICKET_PANEL_CHANNEL_ID = 1401148941751550006
 
 # =========================
 # Rollen und Ränge (Police Officer Rollen)
@@ -65,18 +65,18 @@ TICKET_PANEL_CHANNEL_ID = 1396969114442006539
 registrierte_user = {}
 
 POLICE_ROLLEN_IDS = [
-    1396969114022711376,  # Rekrut
-    1396969114022711377,  # Officer I
-    1396969114022711378,  # Officer II
-    1396969114022711383,  # Sergeant
-    1396969114031095929,  # Lieutenant
-    1396969114031095930,  # First Lieutenant
-    1396969114031095931,  # Captain
-    1396969114031095932,  # Major
-    1396969114031095933,  # Commander
-    1396969114031095935,  # Deputy Chief
-    1396969114031095936,  # Assistant Chief
-    1396969114031095937,  # Chief of Police
+    1401148940883202110,  # Rekrut
+    1401148940883202111,  # Officer I
+    1401148940883202112,  # Officer II
+    1401148940883202117,  # Sergeant
+    1401148940891459637,  # Lieutenant
+    1401148940891459638,  # First Lieutenant
+    1401148940891459639,  # Captain
+    1401148940891459640,  # Major
+    1401148940891459641,  # Commander
+    1401148940891459643,  # Deputy Chief
+    1401148940891459644,  # Assistant Chief
+    1401148940904169552,  # Chief of Police
 ]
 
 # Neue Reihenfolge (höchster Rang zuerst)
@@ -90,13 +90,10 @@ ROLLEN_IDS = [
 RANGLISTE = POLICE_ROLLEN_IDS  # für andere Funktionen, falls benötigt
 
 BEFUGTE_RANG_IDS = [
-    1396969114005930128,
-    1396969114031095936,
-    1396969114031095937,
-    1396969114039226595
+    1401148940904169556
 ]
 
-ERLAUBTE_ROLLEN_ID = 1401284034109243557  # Für !loeschen
+ERLAUBTE_ROLLEN_ID = 1401148940904169558  # Für !loeschen
 
 # =========================
 # 🎟️ Ticket-System: Fragen & Speicher
@@ -347,7 +344,7 @@ async def on_ready():
                 )
                 embed.set_image(url=LOGO_URL)
                 embed.set_thumbnail(url=LOGO_URL)
-                embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
+                embed.set_footer(text="MonamiV Police Department", icon_url=LOGO_URL)
                 view = TicketDropdown()
                 await panel_channel.send(embed=embed, view=view)
                 logging.info("📌 Ticket-Panel im Kanal gepostet.")
@@ -355,11 +352,11 @@ async def on_ready():
 # =========================
 # Server und Kanal-IDs (deine Werte)
 # =========================
-SERVER_ID = 1396969113955602562  # Deine Server-ID
-WILLKOMMEN_KANAL_ID = 1396969114039226598
-LEAVE_KANAL_ID = 1396969114442006538
-POST_CHANNEL_ID = 1396969114039226599  # Post-Kanal (Ranking / Fallback für Transkripte)
-LOGO_FILE = "BLCP-Logo2-3.png"  # Dein Logo muss lokal im Projektordner liegen
+SERVER_ID = 1401148940812026038  # Deine Server-ID
+WILLKOMMEN_KANAL_ID = 1401148941751550003
+LEAVE_KANAL_ID = 1401148941751550005
+POST_CHANNEL_ID = 1401148941751550006  # Post-Kanal (Ranking / Fallback für Transkripte)
+LOGO_FILE = ""  # Dein Logo muss lokal im Projektordner liegen
 
 
 @bot.event
@@ -371,7 +368,7 @@ async def on_member_join(member):
     if channel:
         
         embed = discord.Embed(
-    title="👮 Willkommen auf **Blood Life Police Department**",
+    title="👮 Willkommen auf **MonamiV Police Department**",
     description=(
         f"{member.mention}, schön, dass du da bist!\n\n"
         "📚 **Bitte halte dich im Dienst an die Funkcodes**\n"
@@ -380,13 +377,13 @@ async def on_member_join(member):
     color=discord.Color.dark_blue()
 )
         embed.set_author(
-            name="Police Department | BloodLife",
+            name="Police Department | MonamiV",
             icon_url=member.guild.icon.url if member.guild.icon else None
         )
         embed.set_thumbnail(url="attachment://logo.png")   # kleines Logo oben rechts
         embed.set_image(url="attachment://logo.png")       # großes Logo unten
         embed.set_footer(
-            text="BloodLife Police Department | Made by Vxle",
+            text="MonamiV Police Department | Made by Vxle",
             icon_url="attachment://logo.png"
         )
         
@@ -423,7 +420,7 @@ async def on_member_remove(member):
         color=discord.Color.dark_grey()
     )
     embed.set_author(
-        name="Police Department | Blood Life",
+        name="MonamiV Police Department | made by Vxle",
         icon_url=member.guild.icon.url if member.guild.icon else None
     )
     embed.set_thumbnail(url="attachment://logo.png")   # kleines Logo oben rechts
@@ -435,18 +432,6 @@ async def on_member_remove(member):
 
     file = discord.File(LOGO_FILE, filename="logo.png")
     await channel.send(embed=embed, file=file)
-
-
-# -------------------------
-# Ticket-Antworten verarbeiten (nur EIN on_message vorhanden)
-# -------------------------
-@bot.event
-async def on_message(message):
-    EINSTELLUNGSKANAL_ID = 1396969115813544127  # Der Kanal, in dem /einstellen verwendet wird
-
-    # Ignoriere Bots
-    if message.author.bot:
-        return
 
     # -------------------------
     # Ticket-Antworten verarbeiten
@@ -481,7 +466,7 @@ async def on_message(message):
                     )
                     embed.set_image(url=LOGO_URL)
                     embed.set_thumbnail(url=LOGO_URL)
-                    embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
+                    embed.set_footer(text="MonamiV Police Department", icon_url=LOGO_URL)
                     embed.add_field(name="Antworten", value=antworten_text, inline=False)
                     embed.set_footer(text=f"Erstellt: {ticket.get('created_at')}")
                     await ziel_channel.send(embed=embed)
@@ -717,7 +702,7 @@ async def dienstnummern(interaction: discord.Interaction):
     )
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
-    embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)
+    embed.set_footer(text="MonamiV Police Department", icon_url=LOGO_URL)
     for user_id, daten in registrierte_user.items():
         mitglied = interaction.guild.get_member(user_id)
         if mitglied:
@@ -745,7 +730,7 @@ def build_police_ranking_embed(guild):
     )
     embed.set_image(url=LOGO_URL)
     embed.set_thumbnail(url=LOGO_URL)
-    embed.set_footer(text="BloodLife Police Department", icon_url=LOGO_URL)  # Dark Red
+    embed.set_footer(text="MonamiV Police Department", icon_url=LOGO_URL)  # Dark Red
     # Rollen umkehren, damit Chief oben ist
     for role_id in reversed(POLICE_ROLLEN_IDS):
         role = guild.get_role(role_id)
